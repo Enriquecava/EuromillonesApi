@@ -1,0 +1,33 @@
+name: Run Euromillones Scraper
+
+on:
+  schedule:
+    - cron: '0 22 * * 2,5'
+  workflow_dispatch:
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4' 
+
+      - name: Install dependencies
+        run: |
+          gem install bundler
+          bundle install
+
+      - name: Install Playwright browsers
+        run: |
+          npx playwright install
+
+      - name: Run scraper
+        run: |
+          DATE=$(date +%F)
+          bundle exec ruby scrapper/scrapper.rb $DATE
