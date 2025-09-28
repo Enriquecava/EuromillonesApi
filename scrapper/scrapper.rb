@@ -1,16 +1,29 @@
 require "playwright"
 require_relative "pom/lottery_page"
-require "sqlite3"
+require "pg"
 require "json"
+require "dotenv/load"
 
-DB = SQLite3::Database.new "euromillones.db"
+DB = PG.connect(
+  host: ENV['PG_HOST'],
+  port: ENV['PG_PORT'],
+  dbname: ENV['PG_DB'],
+  user: ENV['PG_USER'],
+  password: ENV['PG_PASSWORD'],
+  sslmode: 'require'
+)
 
 
 def save_result(date_str, numbers, stars, prizes)
-  DB.execute(
-    "INSERT OR REPLACE INTO results (date, bolas, stars, jackpot) VALUES (?, ?, ?, ?)",
-    [date_str, numbers.to_json, stars.to_json, prizes.to_json]
-  )
+ DB.exec_params(
+  "INSERT INTO results (date, bolas, stars, jackpot)
+   VALUES ($1, $2, $3, $4)
+   ON CONFLICT (date) DO UPDATE
+   SET bolas = EXCLUDED.bolas,
+       stars = EXCLUDED.stars,
+       jackpot = EXCLUDED.jackpot",
+  [date_str, numbers.to_json, stars.to_json, prizes.to_json]
+)
   puts "Saved result for #{date_str}"
 end
 

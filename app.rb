@@ -1,10 +1,18 @@
 require "sinatra"
-require "sqlite3"
+require "pg"
 require "json"
 require "date"
+require "dotenv/load"
 
-DB = SQLite3::Database.new "euromillones.db"
-DB.results_as_hash = true
+
+DB = PG.connect(
+  host: ENV['PG_HOST'],
+  port: ENV['PG_PORT'],
+  dbname: ENV['PG_DB'],
+  user: ENV['PG_USER'],
+  password: ENV['PG_PASSWORD'],
+  sslmode: 'require'
+)
 
 
 # Home endpoint: info about the API
@@ -62,10 +70,9 @@ get "/results/:date" do
   end
 
   # Search in database
-  row = DB.get_first_row("SELECT * FROM results WHERE date = ?", [date_str])
+  row = DB.exec_params("SELECT * FROM results WHERE date = $1", [date_str]).first
 
   if row
-    content_type :json
     {
       date: row["date"],
       balls: JSON.parse(row["bolas"]),
