@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 22 * * 2,5'
   workflow_dispatch:
+    inputs:
+        date:
+          description: 'Fecha para ejecutar el scraper (YYYY-MM-DD)'
+          required: false
+          default: ''
 
 jobs:
   run-scraper:
