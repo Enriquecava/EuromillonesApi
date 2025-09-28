@@ -2,37 +2,62 @@ name: Run Euromillones Scraper
 
 on:
   schedule:
+    # Se ejecuta martes(2) y viernes(5) a las 22:00 UTC
     - cron: '0 22 * * 2,5'
-  workflow_dispatch:
+  workflow_dispatch: # Permite ejecución manual
     inputs:
-        date:
-          description: 'Fecha para ejecutar el scraper (YYYY-MM-DD)'
-          required: false
-          default: ''
+      date:
+        description: 'Fecha para ejecutar el scraper (YYYY-MM-DD)'
+        required: false
+        default: ''
 
 jobs:
-  run-scraper:
+
+  cron_scraper:
+    name: Scraper scheduled (cron)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.4' 
-
+          ruby-version: '3.4'
       - name: Install dependencies
         run: |
           gem install bundler
           bundle install
-
       - name: Install Playwright browsers
         run: |
           npx playwright install
-
-      - name: Run scraper
+      - name: Run scraper for today
         run: |
           DATE=$(date +%F)
+          echo "Running scraper for date: $DATE"
+          bundle exec ruby scrapper/scrapper.rb $DATE
+
+  manual_scraper:
+    name: Scraper manual (workflow_dispatch)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' # Solo se ejecuta manualmente
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+      - name: Install dependencies
+        run: |
+          gem install bundler
+          bundle install
+      - name: Install Playwright browsers
+        run: |
+          npx playwright install
+      - name: Run scraper for manual date
+        run: |
+          DATE="${{ github.event.inputs.date }}"
+          if [ -z "$DATE" ]; then
+            echo "Error: No date provided"
+            exit 1
+          fi
+          echo "Running scraper for date: $DATE"
           bundle exec ruby scrapper/scrapper.rb $DATE
