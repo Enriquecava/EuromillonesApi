@@ -2,15 +2,16 @@ require "sinatra"
 require "json"
 require "date"
 require_relative "../db"
+require_relative "../lib/validators"
 
-# GET result by date (DD/MM/YYYY)
+# GET result by date (YYYY-MM-DD)
 get "/results/:date" do
-  date_str = params[:date]
+  date_str = params[:date]&.strip
 
-  # Validate format DD/MM/YYYY
-  unless date_str =~ /^\d{4}\-\d{2}\-\d{2}$/
+  # Validate date format
+  unless Validators.valid_date_format?(date_str)
     status 400
-    return { error: "Invalid date format (use YYYY-MM-DD)" }.to_json
+    return Validators.validation_error("Invalid date format (use YYYY-MM-DD)", "date").to_json
   end
 
   begin

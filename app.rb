@@ -1,6 +1,7 @@
 require "sinatra"
 require "json"
 require_relative "db"
+require_relative "lib/validators"
 
 # Cargar rutas separadas
 require_relative "routes/system"

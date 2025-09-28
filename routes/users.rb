@@ -1,7 +1,8 @@
 # users.rb
 require "sinatra"
 require "json"
-require_relative "../db"  
+require_relative "../db"
+require_relative "../lib/validators"
 
 # ------------------------------
 # GET user by email
@@ -10,11 +11,11 @@ require_relative "../db"
 get "/user/:email" do
   content_type :json
   begin
-    email = params[:email]&.strip
+    email = Validators.sanitize_email(params[:email])
 
-    if email.nil? || email.empty?
+    unless Validators.valid_email?(email)
       status 400
-      return { error: "Email parameter is required" }.to_json
+      return Validators.validation_error("Invalid email format", "email").to_json
     end
 
     result = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
@@ -44,11 +45,11 @@ post "/user" do
   content_type :json
   begin
     payload = JSON.parse(request.body.read)
-    email = payload["email"]&.strip
+    email = Validators.sanitize_email(payload["email"])
 
-    if email.nil? || email.empty?
+    unless Validators.valid_email?(email)
       status 400
-      return { error: "Email is required" }.to_json
+      return Validators.validation_error("Invalid email format", "email").to_json
     end
     user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
     if user.ntuples > 0
@@ -82,13 +83,18 @@ end
 put "/user/:email" do
   content_type :json
   begin
-    old_email = params[:email]&.strip
+    old_email = Validators.sanitize_email(params[:email])
     payload = JSON.parse(request.body.read)
-    new_email = payload["email"]&.strip
+    new_email = Validators.sanitize_email(payload["email"])
 
-    if old_email.nil? || old_email.empty? || new_email.nil? || new_email.empty?
+    unless Validators.valid_email?(old_email)
       status 400
-      return { error: "Both old and new email are required" }.to_json
+      return Validators.validation_error("Invalid old email format", "old_email").to_json
+    end
+
+    unless Validators.valid_email?(new_email)
+      status 400
+      return Validators.validation_error("Invalid new email format", "new_email").to_json
     end
     new_mail_verification = DB.exec_params("SELECT * FROM users WHERE email = $1", [new_email])
     old_mail_verification = DB.exec_params("SELECT * FROM users WHERE email = $1", [old_email])
@@ -126,11 +132,11 @@ end
 delete "/user/:email" do
   content_type :json
   begin
-    email = params[:email]&.strip
+    email = Validators.sanitize_email(params[:email])
 
-    if email.nil? || email.empty?
+    unless Validators.valid_email?(email)
       status 400
-      return { error: "Email parameter is required" }.to_json
+      return Validators.validation_error("Invalid email format", "email").to_json
     end
 
     result = DB.exec_params("DELETE FROM users WHERE email = $1", [email])

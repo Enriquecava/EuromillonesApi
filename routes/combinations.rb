@@ -1,7 +1,8 @@
 # combinations.rb
 require "sinatra"
 require "json"
-require_relative "../db" 
+require_relative "../db"
+require_relative "../lib/validators"
 
 # ------------------------------
 # CREATE a new combination for a user
@@ -12,24 +13,26 @@ post "/combinations" do
   content_type :json
   begin
     payload = JSON.parse(request.body.read)
-    email = payload["email"]&.strip
+    email = Validators.sanitize_email(payload["email"])
     balls = payload["balls"]
     stars = payload["stars"]
 
-    # Validate input
-    if email.nil? || balls.nil? || stars.nil?
+    # Validate email
+    unless Validators.valid_email?(email)
       status 400
-      return { error: "Email, balls and stars are required" }.to_json
+      return Validators.validation_error("Invalid email format", "email").to_json
     end
 
-    if balls.size < 5
+    # Validate balls
+    unless Validators.valid_lottery_balls?(balls)
       status 400
-      return { error: "At least 5 balls required" }.to_json
+      return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
     end
 
-    if stars.size < 2
+    # Validate stars
+    unless Validators.valid_lottery_stars?(stars)
       status 400
-      return { error: "At least 2 stars required" }.to_json
+      return Validators.validation_error("Invalid stars: must be exactly 2 unique integers between 1-12", "stars").to_json
     end
     # Check if user exists
     user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
@@ -53,7 +56,7 @@ post "/combinations" do
     )
     combination_id = result[0]["id"]
     status 201
-    { message: "Combination succesfully added ", email: email, balls: balls, stars: stars, combination_id: combination_id }.to_json
+    { message: "Combination successfully added", email: email, balls: balls, stars: stars, combination_id: combination_id }.to_json
 
   rescue JSON::ParserError
     status 400
@@ -71,10 +74,11 @@ end
 get "/combinations/:email" do
   content_type :json
   begin
-    email = params[:email]&.strip
-    if email.nil? || email.empty?
+    email = Validators.sanitize_email(params[:email])
+
+    unless Validators.valid_email?(email)
       status 400
-      return { error: "Email parameter is required" }.to_json
+      return Validators.validation_error("Invalid email format", "email").to_json
     end
     user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
     if user.ntuples == 0
@@ -110,14 +114,26 @@ end
 put "/combinations/:id" do
   content_type :json
   begin
+    unless Validators.valid_combination_id?(params[:id])
+      status 400
+      return Validators.validation_error("Invalid combination ID", "id").to_json
+    end
+
     id = params[:id].to_i
     payload = JSON.parse(request.body.read)
     balls = payload["balls"]
     stars = payload["stars"]
 
-    if balls.nil? || stars.nil?
+    # Validate balls
+    unless Validators.valid_lottery_balls?(balls)
       status 400
-      return { error: "Balls and stars are required" }.to_json
+      return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
+    end
+
+    # Validate stars
+    unless Validators.valid_lottery_stars?(stars)
+      status 400
+      return Validators.validation_error("Invalid stars: must be exactly 2 unique integers between 1-12", "stars").to_json
     end
 
     user = DB.exec_params(
@@ -168,6 +184,11 @@ end
 delete "/combinations/:id" do
   content_type :json
   begin
+    unless Validators.valid_combination_id?(params[:id])
+      status 400
+      return Validators.validation_error("Invalid combination ID", "id").to_json
+    end
+
     id = params[:id].to_i
 
     result = DB.exec_params("DELETE FROM combinations WHERE id = $1", [id])
