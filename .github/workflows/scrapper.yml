@@ -39,7 +39,7 @@ jobs:
           bundle exec ruby scrapper/scrapper.rb $DATE
 
       - name: Upload database artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: euromillones-db
           path: euromillones.db
@@ -76,7 +76,7 @@ jobs:
           bundle exec ruby scrapper/scrapper.rb $DATE
 
       - name: Upload database artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: euromillones-db
           path: euromillones.db
