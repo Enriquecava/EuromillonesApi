@@ -2,9 +2,8 @@ name: Run Euromillones Scraper
 
 on:
   schedule:
-    # Se ejecuta martes(2) y viernes(5) a las 22:00 UTC
     - cron: '0 22 * * 2,5'
-  workflow_dispatch: # Permite ejecución manual
+  workflow_dispatch:
     inputs:
       date:
         description: 'Fecha para ejecutar el scraper (YYYY-MM-DD)'
@@ -18,40 +17,54 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'
+
       - name: Install dependencies
         run: |
           gem install bundler
           bundle install
+
       - name: Install Playwright browsers
         run: |
           npx playwright install
+
       - name: Run scraper for today
         run: |
           DATE=$(date +%F)
           echo "Running scraper for date: $DATE"
           bundle exec ruby scrapper/scrapper.rb $DATE
 
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: euromillones-db
+          path: euromillones.db
+
   manual_scraper:
     name: Scraper manual (workflow_dispatch)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' # Solo se ejecuta manualmente
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'
+
       - name: Install dependencies
         run: |
           gem install bundler
           bundle install
+
       - name: Install Playwright browsers
         run: |
           npx playwright install
+
       - name: Run scraper for manual date
         run: |
           DATE="${{ github.event.inputs.date }}"
@@ -61,3 +74,9 @@ jobs:
           fi
           echo "Running scraper for date: $DATE"
           bundle exec ruby scrapper/scrapper.rb $DATE
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: euromillones-db
+          path: euromillones.db
