@@ -14,7 +14,7 @@ get "/" do
     api: "Euromillones Results API",
     version: "1.0",
     endpoints: {
-      get_result: "/results/:date  (DD/MM/YYYY)",
+      get_result: "/results/:date  (YYYY-MM-DD)",
       add_result: "/results  (POST JSON)",
       health: "/health"
     },
@@ -42,14 +42,14 @@ get "/results/:date" do
   date_str = params[:date]
 
   # Validate format DD/MM/YYYY
-  unless date_str =~ /^\d{2}\/\d{2}\/\d{4}$/
+  unless date_str =~ /^\d{4}\-\d{2}\-\d{2}$/
     status 400
-    return { error: "Invalid date format (use DD/MM/YYYY)" }.to_json
+    return { error: "Invalid date format (use YYYY-MM-DD)" }.to_json
   end
 
   begin
     # Check if it's a real date
-    Date.strptime(date_str, "%d/%m/%Y")
+    date = Date.strptime(date_str, "%Y-%m-%d")  # <-- CHANGED
   rescue ArgumentError
     status 400
     return { error: "Invalid date (day or month does not exist)" }.to_json
@@ -62,12 +62,12 @@ get "/results/:date" do
   end
 
   # Search in database
-  row = DB.get_first_row("SELECT * FROM results WHERE fecha = ?", [date_str])
+  row = DB.get_first_row("SELECT * FROM results WHERE date = ?", [date_str])
 
   if row
     content_type :json
     {
-      date: row["fecha"],
+      date: row["date"],
       balls: JSON.parse(row["bolas"]),
       stars: JSON.parse(row["stars"]),
       jackpot: JSON.parse(row["jackpot"])
