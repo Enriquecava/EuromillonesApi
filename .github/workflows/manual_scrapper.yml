@@ -1,8 +1,11 @@
-name: Cron Euromillones Scraper
+name: Manual Euromillones Scraper
 
 on:
-  schedule:
-    - cron: '0 22 * * 2,5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date to execute the scrapper (YYYY-MM-DD)'
+        required: true
 
 env:
   PG_HOST: ${{ secrets.PG_HOST }}
@@ -12,7 +15,7 @@ env:
   PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
 
 jobs:
-  cron_scraper:
+  manual_scraper:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -30,8 +33,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install
 
-      - name: Run scraper for today
+      - name: Run scraper for manual date
         run: |
-          DATE=$(date +%F)
+          DATE="${{ github.event.inputs.date }}"
           echo "Running scraper for date: $DATE"
           bundle exec ruby scrapper/scrapper.rb $DATE
