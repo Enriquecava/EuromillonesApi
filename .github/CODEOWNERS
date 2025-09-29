@@ -1,0 +1,17 @@
+# Global code owners
+# This file defines individuals or teams that are responsible for code in this repository.
+# Code owners are automatically requested for review when someone opens a pull request 
+# that modifies code that they own.
+
+# Global owner - all files in the repository
+* @Enriquecava
+
+# Specific ownership for critical files
+/.github/ @Enriquecava
+/docs/ @Enriquecava
+/lib/ @Enriquecava
+/routes/ @Enriquecava
+app.rb @Enriquecava
+db.rb @Enriquecava
+Gemfile @Enriquecava
+swagger.yaml @Enriquecava
