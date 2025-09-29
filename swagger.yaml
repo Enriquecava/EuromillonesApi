@@ -3,19 +3,19 @@ openapi: 3.0.3
 info:
   title: Euromillones Results API
   description: |
-    Esta API permite consultar resultados de Euromillones, gestionar usuarios y sus combinaciones.
+    This API allows querying Euromillones results, managing users and their combinations.
     
-    ## Características principales:
-    - Consulta de resultados históricos por fecha
-    - Gestión completa de usuarios (CRUD)
-    - Gestión de combinaciones de lotería para usuarios
-    - Validación exhaustiva de datos de entrada
-    - Manejo de errores detallado
+    ## Main features:
+    - Query historical results by date
+    - Complete user management (CRUD)
+    - Lottery combination management for users
+    - Comprehensive input data validation
+    - Detailed error handling
     
-    ## Casos de prueba incluidos:
-    - ✅ Operaciones exitosas con datos válidos
-    - ❌ Validación de errores con datos faltantes/inválidos
-    - 🔄 Flujos completos de usuario
+    ## Test cases included:
+    - ✅ Successful operations with valid data
+    - ❌ Error validation with missing/invalid data
+    - 🔄 Complete user flows
   version: "1.0"
   contact:
     name: API Support
@@ -26,28 +26,28 @@ info:
 
 servers:
   - url: http://localhost:4567
-    description: Servidor de desarrollo local
+    description: Local development server
 
 tags:
   - name: System
-    description: Información del sistema y health checks
+    description: System information and health checks
   - name: Results
-    description: Consulta de resultados de Euromillones
+    description: Euromillones results query
   - name: Users
-    description: Gestión de usuarios
+    description: User management
   - name: Combinations
-    description: Gestión de combinaciones de lotería
+    description: Lottery combination management
 
 paths:
   /:
     get:
       tags:
         - System
-      summary: Información de la API
-      description: Obtiene información general sobre la API y sus endpoints disponibles
+      summary: API information
+      description: Gets general information about the API and its available endpoints
       responses:
         '200':
-          description: Información de la API
+          description: API information
           content:
             application/json:
               schema:
@@ -61,7 +61,7 @@ paths:
                     example: "1.0"
                   endpoints:
                     type: object
-                    description: Lista de endpoints disponibles
+                    description: List of available endpoints
                   description:
                     type: string
                     example: "This API allows you to query Euromillones results, manage users and their combinations."
@@ -71,10 +71,10 @@ paths:
       tags:
         - System
       summary: Health check
-      description: Verifica el estado de la API y la conectividad con la base de datos
+      description: Checks API status and database connectivity
       responses:
         '200':
-          description: API funcionando correctamente
+          description: API working correctly
           content:
             application/json:
               schema:
@@ -87,7 +87,7 @@ paths:
                     type: string
                     example: "API is live and database is reachable"
         '500':
-          description: Error en la API o base de datos
+          description: API or database error
           content:
             application/json:
               schema:
@@ -97,20 +97,20 @@ paths:
     get:
       tags:
         - Results
-      summary: Obtener resultado por fecha
+      summary: Get result by date
       description: |
-        Consulta el resultado de Euromillones para una fecha específica.
+        Queries the Euromillones result for a specific date.
         
-        **Casos de prueba:**
-        - ✅ Fecha válida con resultado: `2024-01-15`
-        - ❌ Formato inválido: `2024-13-45`
-        - ❌ Fecha futura: `2025-12-31`
-        - ❌ Fecha sin resultado: `2020-01-01`
+        **Test cases:**
+        - ✅ Valid date with result: `2024-01-15`
+        - ❌ Invalid format: `2024-13-45`
+        - ❌ Future date: `2025-12-31`
+        - ❌ Date without result: `2020-01-01`
       parameters:
         - name: date
           in: path
           required: true
-          description: Fecha en formato YYYY-MM-DD
+          description: Date in YYYY-MM-DD format
           schema:
             type: string
             format: date
@@ -118,28 +118,28 @@ paths:
             example: "2024-01-15"
       responses:
         '200':
-          description: Resultado encontrado
+          description: Result found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LotteryResult'
         '400':
-          description: Formato de fecha inválido o fecha futura
+          description: Invalid date format or future date
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
                 invalid_format:
-                  summary: Formato inválido
+                  summary: Invalid format
                   value:
                     error: "Invalid date format (use YYYY-MM-DD)"
                 future_date:
-                  summary: Fecha futura
+                  summary: Future date
                   value:
                     error: "Date cannot be in the future"
         '404':
-          description: No se encontró resultado para esta fecha
+          description: No result found for this date
           content:
             application/json:
               schema:
@@ -151,15 +151,15 @@ paths:
     post:
       tags:
         - Users
-      summary: Crear usuario
+      summary: Create user
       description: |
-        Crea un nuevo usuario con email único.
+        Creates a new user with unique email.
         
-        **Casos de prueba:**
-        - ✅ Email válido: `{"email": "user@example.com"}`
-        - ❌ Email inválido: `{"email": "invalid-email"}`
-        - ❌ Email faltante: `{}`
-        - ❌ Email duplicado: email ya existente
+        **Test cases:**
+        - ✅ Valid email: `{"email": "user@example.com"}`
+        - ❌ Invalid email: `{"email": "invalid-email"}`
+        - ❌ Missing email: `{}`
+        - ❌ Duplicate email: email already exists
       requestBody:
         required: true
         content:
@@ -168,40 +168,40 @@ paths:
               $ref: '#/components/schemas/UserCreate'
             examples:
               valid_email:
-                summary: Email válido
+                summary: Valid email
                 value:
                   email: "user@example.com"
               invalid_email:
-                summary: Email inválido
+                summary: Invalid email
                 value:
                   email: "invalid-email"
               missing_email:
-                summary: Email faltante
+                summary: Missing email
                 value: {}
       responses:
         '201':
-          description: Usuario creado exitosamente
+          description: User created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserCreateResponse'
         '400':
-          description: Datos inválidos
+          description: Invalid data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
                 invalid_email:
-                  summary: Email inválido
+                  summary: Invalid email
                   value:
                     error: "Invalid email format"
                 invalid_json:
-                  summary: JSON inválido
+                  summary: Invalid JSON
                   value:
                     error: "Invalid JSON"
         '409':
-          description: Email ya existe
+          description: Email already exists
           content:
             application/json:
               schema:
@@ -213,38 +213,38 @@ paths:
     get:
       tags:
         - Users
-      summary: Obtener usuario
+      summary: Get user
       description: |
-        Obtiene información de un usuario por email.
+        Gets user information by email.
         
-        **Casos de prueba:**
-        - ✅ Email existente: `user@example.com`
-        - ❌ Email inválido: `invalid-email`
-        - ❌ Usuario no encontrado: `notfound@example.com`
+        **Test cases:**
+        - ✅ Existing email: `user@example.com`
+        - ❌ Invalid email: `invalid-email`
+        - ❌ User not found: `notfound@example.com`
       parameters:
         - name: email
           in: path
           required: true
-          description: Email del usuario
+          description: User email
           schema:
             type: string
             format: email
             example: "user@example.com"
       responses:
         '200':
-          description: Usuario encontrado
+          description: User found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
         '400':
-          description: Email inválido
+          description: Invalid email
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Usuario no encontrado
+          description: User not found
           content:
             application/json:
               schema:
@@ -253,20 +253,20 @@ paths:
     put:
       tags:
         - Users
-      summary: Actualizar email de usuario
+      summary: Update user email
       description: |
-        Actualiza el email de un usuario existente.
+        Updates an existing user's email.
         
-        **Casos de prueba:**
-        - ✅ Emails válidos: `{"email": "new@example.com"}`
-        - ❌ Email inválido: `{"email": "invalid"}`
-        - ❌ Usuario no encontrado: email inexistente en URL
-        - ❌ Nuevo email ya existe: email duplicado
+        **Test cases:**
+        - ✅ Valid emails: `{"email": "new@example.com"}`
+        - ❌ Invalid email: `{"email": "invalid"}`
+        - ❌ User not found: non-existent email in URL
+        - ❌ New email already exists: duplicate email
       parameters:
         - name: email
           in: path
           required: true
-          description: Email actual del usuario
+          description: Current user email
           schema:
             type: string
             format: email
@@ -278,25 +278,25 @@ paths:
               $ref: '#/components/schemas/UserUpdate'
       responses:
         '200':
-          description: Email actualizado exitosamente
+          description: Email updated successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserUpdateResponse'
         '400':
-          description: Datos inválidos
+          description: Invalid data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Usuario no encontrado
+          description: User not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Nuevo email ya existe
+          description: New email already exists
           content:
             application/json:
               schema:
@@ -305,57 +305,129 @@ paths:
     delete:
       tags:
         - Users
-      summary: Eliminar usuario
+      summary: Delete user
       description: |
-        Elimina un usuario por email.
+        Deletes a user by email with referential integrity validation.
         
-        **Casos de prueba:**
-        - ✅ Usuario existente: `user@example.com`
-        - ❌ Email inválido: `invalid-email`
-        - ❌ Usuario no encontrado: `notfound@example.com`
+        **Test cases:**
+        - ✅ Existing user: `user@example.com`
+        - ❌ Invalid email: `invalid-email`
+        - ❌ User not found: `notfound@example.com`
+        
+        **Note:** This endpoint automatically deletes all combinations associated
+        with the user through database CASCADE constraints.
       parameters:
         - name: email
           in: path
           required: true
-          description: Email del usuario a eliminar
+          description: Email of the user to delete
           schema:
             type: string
             format: email
       responses:
         '200':
-          description: Usuario eliminado exitosamente
+          description: User deleted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserDeleteResponse'
+                $ref: '#/components/schemas/UserDeleteResponseEnhanced'
         '400':
-          description: Email inválido
+          description: Invalid email
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Usuario no encontrado
+          description: User not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /user/{email}/delete-preview:
+    get:
+      tags:
+        - Users
+      summary: User deletion preview
+      description: |
+        Shows what will be deleted before proceeding with user deletion.
+        Provides information about the deletion impact including
+        the number of combinations that will be automatically deleted.
+        
+        **Test cases:**
+        - ✅ Existing user: `user@example.com`
+        - ✅ User with combinations: shows correct count
+        - ✅ User without combinations: shows 0 combinations
+        - ❌ Invalid email: `invalid-email`
+        - ❌ User not found: `notfound@example.com`
+        
+        **Recommended usage:** Call this endpoint before DELETE /user/{email}
+        to inform the user about the deletion impact.
+      parameters:
+        - name: email
+          in: path
+          required: true
+          description: User email to generate the preview
+          schema:
+            type: string
+            format: email
+            example: "user@example.com"
+      responses:
+        '200':
+          description: Deletion preview generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDeletePreview'
+              examples:
+                user_with_combinations:
+                  summary: User with combinations
+                  value:
+                    email: "user@example.com"
+                    user_id: 123
+                    combinations_to_delete: 3
+                    warning: "Deleting this user will permanently remove all associated combinations"
+                    cascade_info: "This operation uses database CASCADE constraints for referential integrity"
+                user_without_combinations:
+                  summary: User without combinations
+                  value:
+                    email: "user@example.com"
+                    user_id: 123
+                    combinations_to_delete: 0
+                    warning: "Deleting this user will permanently remove all associated combinations"
+                    cascade_info: "This operation uses database CASCADE constraints for referential integrity"
+        '400':
+          description: Invalid email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid email format"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "User not found"
+
   /combinations:
     post:
       tags:
         - Combinations
-      summary: Crear combinación
+      summary: Create combination
       description: |
-        Crea una nueva combinación de lotería para un usuario.
+        Creates a new lottery combination for a user.
         
-        **Casos de prueba:**
-        - ✅ Datos válidos: 5 bolas (1-50), 2 estrellas (1-12)
-        - ❌ Email faltante: `{"balls": [1,2,3,4,5], "stars": [1,2]}`
-        - ❌ Bolas inválidas: menos de 5, fuera de rango, duplicadas
-        - ❌ Estrellas inválidas: menos de 2, fuera de rango, duplicadas
-        - ❌ Usuario no encontrado: email inexistente
-        - ❌ Combinación duplicada: misma combinación para el usuario
+        **Test cases:**
+        - ✅ Valid data: 5 balls (1-50), 2 stars (1-12)
+        - ❌ Missing email: `{"balls": [1,2,3,4,5], "stars": [1,2]}`
+        - ❌ Invalid balls: less than 5, out of range, duplicated
+        - ❌ Invalid stars: less than 2, out of range, duplicated
+        - ❌ User not found: non-existent email
+        - ❌ Duplicate combination: same combination for the user
       requestBody:
         required: true
         content:
@@ -364,58 +436,58 @@ paths:
               $ref: '#/components/schemas/CombinationCreate'
             examples:
               valid_combination:
-                summary: Combinación válida
+                summary: Valid combination
                 value:
                   email: "user@example.com"
                   balls: [7, 15, 23, 34, 42]
                   stars: [3, 8]
               missing_email:
-                summary: Email faltante
+                summary: Missing email
                 value:
                   balls: [1, 2, 3, 4, 5]
                   stars: [1, 2]
               invalid_balls:
-                summary: Bolas inválidas
+                summary: Invalid balls
                 value:
                   email: "user@example.com"
                   balls: [1, 2, 3]
                   stars: [1, 2]
               duplicate_balls:
-                summary: Bolas duplicadas
+                summary: Duplicate balls
                 value:
                   email: "user@example.com"
                   balls: [1, 1, 3, 4, 5]
                   stars: [1, 2]
       responses:
         '201':
-          description: Combinación creada exitosamente
+          description: Combination created successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CombinationCreateResponse'
         '400':
-          description: Datos inválidos
+          description: Invalid data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
                 invalid_balls:
-                  summary: Bolas inválidas
+                  summary: Invalid balls
                   value:
                     error: "Invalid balls: must be exactly 5 unique integers between 1-50"
                 invalid_stars:
-                  summary: Estrellas inválidas
+                  summary: Invalid stars
                   value:
                     error: "Invalid stars: must be exactly 2 unique integers between 1-12"
         '404':
-          description: Usuario no encontrado
+          description: User not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Combinación ya existe para este usuario
+          description: Combination already exists for this user
           content:
             application/json:
               schema:
@@ -425,38 +497,38 @@ paths:
     get:
       tags:
         - Combinations
-      summary: Obtener combinaciones de usuario
+      summary: Get user combinations
       description: |
-        Obtiene todas las combinaciones de un usuario.
+        Gets all combinations for a user.
         
-        **Casos de prueba:**
-        - ✅ Usuario con combinaciones: `user@example.com`
-        - ✅ Usuario sin combinaciones: usuario existente sin combinaciones
-        - ❌ Email inválido: `invalid-email`
-        - ❌ Usuario no encontrado: `notfound@example.com`
+        **Test cases:**
+        - ✅ User with combinations: `user@example.com`
+        - ✅ User without combinations: existing user without combinations
+        - ❌ Invalid email: `invalid-email`
+        - ❌ User not found: `notfound@example.com`
       parameters:
         - name: email
           in: path
           required: true
-          description: Email del usuario
+          description: User email
           schema:
             type: string
             format: email
       responses:
         '200':
-          description: Combinaciones del usuario
+          description: User combinations
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserCombinations'
         '400':
-          description: Email inválido
+          description: Invalid email
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Usuario no encontrado
+          description: User not found
           content:
             application/json:
               schema:
@@ -466,21 +538,21 @@ paths:
     put:
       tags:
         - Combinations
-      summary: Actualizar combinación
+      summary: Update combination
       description: |
-        Actualiza una combinación existente.
+        Updates an existing combination.
         
-        **Casos de prueba:**
-        - ✅ ID y datos válidos
-        - ❌ ID inválido: `abc` o `0`
-        - ❌ Combinación no encontrada: ID inexistente
-        - ❌ Datos inválidos: bolas/estrellas fuera de rango
-        - ❌ Combinación duplicada: nueva combinación ya existe para el usuario
+        **Test cases:**
+        - ✅ Valid ID and data
+        - ❌ Invalid ID: `abc` or `0`
+        - ❌ Combination not found: non-existent ID
+        - ❌ Invalid data: balls/stars out of range
+        - ❌ Duplicate combination: new combination already exists for the user
       parameters:
         - name: id
           in: path
           required: true
-          description: ID de la combinación
+          description: Combination ID
           schema:
             type: integer
             minimum: 1
@@ -493,25 +565,25 @@ paths:
               $ref: '#/components/schemas/CombinationUpdate'
       responses:
         '200':
-          description: Combinación actualizada exitosamente
+          description: Combination updated successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CombinationUpdateResponse'
         '400':
-          description: Datos inválidos
+          description: Invalid data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Combinación no encontrada
+          description: Combination not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: Combinación ya existe para este usuario
+          description: Combination already exists for this user
           content:
             application/json:
               schema:
@@ -520,37 +592,37 @@ paths:
     delete:
       tags:
         - Combinations
-      summary: Eliminar combinación
+      summary: Delete combination
       description: |
-        Elimina una combinación por ID.
+        Deletes a combination by ID.
         
-        **Casos de prueba:**
-        - ✅ ID válido existente: `123`
-        - ❌ ID inválido: `abc` o `0`
-        - ❌ Combinación no encontrada: ID inexistente
+        **Test cases:**
+        - ✅ Valid existing ID: `123`
+        - ❌ Invalid ID: `abc` or `0`
+        - ❌ Combination not found: non-existent ID
       parameters:
         - name: id
           in: path
           required: true
-          description: ID de la combinación a eliminar
+          description: ID of the combination to delete
           schema:
             type: integer
             minimum: 1
       responses:
         '200':
-          description: Combinación eliminada exitosamente
+          description: Combination deleted successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CombinationDeleteResponse'
         '400':
-          description: ID inválido
+          description: Invalid ID
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Combinación no encontrada
+          description: Combination not found
           content:
             application/json:
               schema:
@@ -563,10 +635,10 @@ components:
       properties:
         error:
           type: string
-          description: Descripción del error
+          description: Error description
         details:
           type: string
-          description: Información adicional del error
+          description: Additional error information
       required:
         - error
       example:
@@ -578,7 +650,7 @@ components:
         date:
           type: string
           format: date
-          description: Fecha del sorteo
+          description: Draw date
         balls:
           type: array
           items:
@@ -587,7 +659,7 @@ components:
             maximum: 50
           minItems: 5
           maxItems: 5
-          description: Números principales (5 bolas)
+          description: Main numbers (5 balls)
         stars:
           type: array
           items:
@@ -596,10 +668,10 @@ components:
             maximum: 12
           minItems: 2
           maxItems: 2
-          description: Números estrella (2 estrellas)
+          description: Star numbers (2 stars)
         jackpot:
           type: object
-          description: Premios por categoría
+          description: Prizes by category
       required:
         - date
         - balls
@@ -625,7 +697,7 @@ components:
         email:
           type: string
           format: email
-          description: Email del usuario (debe ser único)
+          description: User email (must be unique)
       required:
         - email
       example:
@@ -654,7 +726,7 @@ components:
           format: email
         user_id:
           type: string
-          description: ID interno del usuario
+          description: Internal user ID
       required:
         - email
         - user_id
@@ -668,7 +740,7 @@ components:
         email:
           type: string
           format: email
-          description: Nuevo email del usuario
+          description: New user email
       required:
         - email
       example:
@@ -709,13 +781,74 @@ components:
         message: "User deleted"
         email: "user@example.com"
 
+    UserDeleteResponseEnhanced:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Deletion confirmation message
+        email:
+          type: string
+          format: email
+          description: Email of the deleted user
+        combinations_deleted:
+          type: integer
+          minimum: 0
+          description: Number of combinations automatically deleted
+        referential_integrity:
+          type: string
+          description: Information about how referential integrity is maintained
+      required:
+        - message
+        - email
+        - combinations_deleted
+        - referential_integrity
+      example:
+        message: "User deleted successfully"
+        email: "user@example.com"
+        combinations_deleted: 3
+        referential_integrity: "Maintained via database CASCADE constraints"
+
+    UserDeletePreview:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email
+        user_id:
+          type: integer
+          description: Internal user ID
+        combinations_to_delete:
+          type: integer
+          minimum: 0
+          description: Number of combinations that will be deleted
+        warning:
+          type: string
+          description: Warning about the deletion impact
+        cascade_info:
+          type: string
+          description: Information about the cascade deletion mechanism
+      required:
+        - email
+        - user_id
+        - combinations_to_delete
+        - warning
+        - cascade_info
+      example:
+        email: "user@example.com"
+        user_id: 123
+        combinations_to_delete: 3
+        warning: "Deleting this user will permanently remove all associated combinations"
+        cascade_info: "This operation uses database CASCADE constraints for referential integrity"
+
     CombinationCreate:
       type: object
       properties:
         email:
           type: string
           format: email
-          description: Email del usuario propietario
+          description: Owner user email
         balls:
           type: array
           items:
@@ -724,7 +857,7 @@ components:
             maximum: 50
           minItems: 5
           maxItems: 5
-          description: 5 números principales únicos (1-50)
+          description: 5 unique main numbers (1-50)
         stars:
           type: array
           items:
@@ -733,7 +866,7 @@ components:
             maximum: 12
           minItems: 2
           maxItems: 2
-          description: 2 números estrella únicos (1-12)
+          description: 2 unique star numbers (1-12)
       required:
         - email
         - balls
@@ -761,7 +894,7 @@ components:
             type: integer
         combination_id:
           type: string
-          description: ID de la combinación creada
+          description: ID of the created combination
       required:
         - message
         - email
@@ -786,7 +919,7 @@ components:
             maximum: 50
           minItems: 5
           maxItems: 5
-          description: 5 números principales únicos (1-50)
+          description: 5 unique main numbers (1-50)
         stars:
           type: array
           items:
@@ -795,7 +928,7 @@ components:
             maximum: 12
           minItems: 2
           maxItems: 2
-          description: 2 números estrella únicos (1-12)
+          description: 2 unique star numbers (1-12)
       required:
         - balls
         - stars
@@ -848,7 +981,7 @@ components:
       properties:
         id:
           type: integer
-          description: ID único de la combinación
+          description: Unique combination ID
         balls:
           type: array
           items:
