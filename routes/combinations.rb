@@ -3,6 +3,7 @@ require "sinatra"
 require "json"
 require_relative "../db"
 require_relative "../lib/validators"
+require_relative "../lib/validation_middleware"
 require_relative "../lib/app_logger"
 
 # ------------------------------
@@ -12,27 +13,61 @@ require_relative "../lib/app_logger"
 # ------------------------------
 post "/combinations" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    required_fields: ["email", "balls", "stars"],
+    type_schema: {
+      email: :email,
+      balls: :array_of_integers,
+      stars: :array_of_integers
+    }
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status_code = case validation_result["field"]
+    when "rate_limit"
+      429
+    when "payload_size"
+      413
+    when "content_type", "json_parse", "json_structure", "encoding"
+      400
+    else
+      400
+    end
+    status status_code
+    return validation_result.to_json
+  end
+  
   begin
-    payload = JSON.parse(request.body.read)
+    # Get validated payload
+    payload = validation_result
     email = Validators.sanitize_email(payload["email"])
     balls = payload["balls"]
     stars = payload["stars"]
 
-    # Validate email
+    # Additional business logic validation
     unless Validators.valid_email?(email)
       AppLogger.log_validation_error("email", payload["email"], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
+    
+    # Check for suspicious patterns in email
+    if Validators.contains_suspicious_patterns?(email)
+      AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
+    end
 
-    # Validate balls
+    # Enhanced lottery balls validation
     unless Validators.valid_lottery_balls?(balls)
       AppLogger.log_validation_error("balls", balls, "Invalid balls: must be exactly 5 unique integers between 1-50")
       status 400
       return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
     end
 
-    # Validate stars
+    # Enhanced lottery stars validation
     unless Validators.valid_lottery_stars?(stars)
       AppLogger.log_validation_error("stars", stars, "Invalid stars: must be exactly 2 unique integers between 1-12")
       status 400
@@ -67,10 +102,6 @@ post "/combinations" do
     status 201
     { message: "Combination successfully added", email: email, balls: balls, stars: stars, combination_id: combination_id }.to_json
 
-  rescue JSON::ParserError
-    AppLogger.warn("Invalid JSON in combination creation request", "COMBINATIONS")
-    status 400
-    { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
     AppLogger.log_db_error("INSERT combination", e, { email: email, balls: balls, stars: stars })
     status 500
@@ -84,11 +115,31 @@ end
 # ------------------------------
 get "/combinations/:email" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    skip_content_type: true
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status 400
+    return validation_result.to_json
+  end
+  
   begin
-    email = Validators.sanitize_email(params[:email])
+    # Get sanitized parameters
+    sanitized_params = validation_result
+    email = Validators.sanitize_email(sanitized_params["email"])
 
     unless Validators.valid_email?(email)
-      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
+      AppLogger.log_validation_error("email", sanitized_params["email"], "Invalid email format")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
+    end
+    
+    # Check for suspicious patterns
+    if Validators.contains_suspicious_patterns?(email)
+      AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
@@ -131,7 +182,33 @@ end
 # ------------------------------
 put "/combinations/:id" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    required_fields: ["balls", "stars"],
+    type_schema: {
+      balls: :array_of_integers,
+      stars: :array_of_integers
+    }
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status_code = case validation_result["field"]
+    when "rate_limit"
+      429
+    when "payload_size"
+      413
+    when "content_type", "json_parse", "json_structure", "encoding"
+      400
+    else
+      400
+    end
+    status status_code
+    return validation_result.to_json
+  end
+  
   begin
+    # Validate combination ID from URL parameter
     unless Validators.valid_combination_id?(params[:id])
       AppLogger.log_validation_error("id", params[:id], "Invalid combination ID")
       status 400
@@ -139,18 +216,20 @@ put "/combinations/:id" do
     end
 
     id = params[:id].to_i
-    payload = JSON.parse(request.body.read)
+    
+    # Get validated payload
+    payload = validation_result
     balls = payload["balls"]
     stars = payload["stars"]
 
-    # Validate balls
+    # Enhanced lottery balls validation
     unless Validators.valid_lottery_balls?(balls)
       AppLogger.log_validation_error("balls", balls, "Invalid balls: must be exactly 5 unique integers between 1-50")
       status 400
       return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
     end
 
-    # Validate stars
+    # Enhanced lottery stars validation
     unless Validators.valid_lottery_stars?(stars)
       AppLogger.log_validation_error("stars", stars, "Invalid stars: must be exactly 2 unique integers between 1-12")
       status 400
@@ -194,10 +273,6 @@ put "/combinations/:id" do
       { message: "Combination updated", id: id, balls: balls, stars: stars }.to_json
     end
 
-  rescue JSON::ParserError
-    AppLogger.warn("Invalid JSON in combination update request", "COMBINATIONS")
-    status 400
-    { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
     AppLogger.log_db_error("UPDATE combination", e, { id: id, balls: balls, stars: stars })
     status 500
@@ -211,7 +286,19 @@ end
 # ------------------------------
 delete "/combinations/:id" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    skip_content_type: true
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status 400
+    return validation_result.to_json
+  end
+  
   begin
+    # Validate combination ID from URL parameter
     unless Validators.valid_combination_id?(params[:id])
       AppLogger.log_validation_error("id", params[:id], "Invalid combination ID")
       status 400

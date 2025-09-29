@@ -3,15 +3,35 @@ require "json"
 require "date"
 require_relative "../db"
 require_relative "../lib/validators"
+require_relative "../lib/validation_middleware"
 require_relative "../lib/app_logger"
 
 # GET result by date (YYYY-MM-DD)
 get "/results/:date" do
-  date_str = params[:date]&.strip
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    skip_content_type: true
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status 400
+    return validation_result.to_json
+  end
+  
+  # Get sanitized parameters
+  sanitized_params = validation_result
+  date_str = sanitized_params["date"]&.strip
 
   # Validate date format
   unless Validators.valid_date_format?(date_str)
-    AppLogger.log_validation_error("date", params[:date], "Invalid date format (use YYYY-MM-DD)")
+    AppLogger.log_validation_error("date", sanitized_params["date"], "Invalid date format (use YYYY-MM-DD)")
+    status 400
+    return Validators.validation_error("Invalid date format (use YYYY-MM-DD)", "date").to_json
+  end
+  
+  # Check for suspicious patterns in date parameter
+  if Validators.contains_suspicious_patterns?(date_str)
+    AppLogger.log_validation_error("date", date_str, "Suspicious patterns detected in date parameter")
     status 400
     return Validators.validation_error("Invalid date format (use YYYY-MM-DD)", "date").to_json
   end
@@ -25,7 +45,7 @@ get "/results/:date" do
     return { error: "Invalid date (day or month does not exist)" }.to_json
   end
 
-    # Check if it's in the future
+  # Check if it's in the future
   if date > Date.today
     AppLogger.log_validation_error("date", date_str, "Date cannot be in the future")
     status 400

@@ -11,11 +11,22 @@ info:
     - Lottery combination management for users
     - Comprehensive input data validation
     - Detailed error handling
+    - Enhanced security validations
+    
+    ## Security Features:
+    - 🛡️ Rate limiting (10 requests per minute per IP)
+    - 🔒 Content-Type validation for POST/PUT requests
+    - 📏 Payload size limits (1MB maximum)
+    - 🔍 Suspicious pattern detection (SQL injection, XSS)
+    - 🔤 Character encoding validation (UTF-8)
+    - 🧹 Input sanitization and validation
+    - 📊 HTTP header validation
     
     ## Test cases included:
     - ✅ Successful operations with valid data
     - ❌ Error validation with missing/invalid data
     - 🔄 Complete user flows
+    - 🛡️ Security validation tests
   version: "1.0"
   contact:
     name: API Support
@@ -186,7 +197,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserCreateResponse'
         '400':
-          description: Invalid data
+          description: Invalid data or validation error
           content:
             application/json:
               schema:
@@ -196,10 +207,27 @@ paths:
                   summary: Invalid email
                   value:
                     error: "Invalid email format"
+                    field: "email"
+                    timestamp: "2024-01-15T10:30:00Z"
                 invalid_json:
                   summary: Invalid JSON
                   value:
-                    error: "Invalid JSON"
+                    error: "Invalid JSON format"
+                    field: "json_parse"
+                    timestamp: "2024-01-15T10:30:00Z"
+                missing_fields:
+                  summary: Missing required fields
+                  value:
+                    error: "Missing required fields"
+                    details: "The following fields are required: email"
+                    field: "required_fields"
+                    timestamp: "2024-01-15T10:30:00Z"
+                suspicious_patterns:
+                  summary: Suspicious patterns detected
+                  value:
+                    error: "Invalid email format"
+                    field: "email"
+                    timestamp: "2024-01-15T10:30:00Z"
         '409':
           description: Email already exists
           content:
@@ -208,6 +236,29 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Email already exists"
+                timestamp: "2024-01-15T10:30:00Z"
+        '413':
+          description: Payload too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Payload too large"
+                details: "Maximum allowed size is 1048576 bytes"
+                field: "payload_size"
+                timestamp: "2024-01-15T10:30:00Z"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Rate limit exceeded"
+                details: "Maximum 100 requests per 60 seconds"
+                field: "rate_limit"
+                timestamp: "2024-01-15T10:30:00Z"
 
   /user/{email}:
     get:
@@ -466,7 +517,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CombinationCreateResponse'
         '400':
-          description: Invalid data
+          description: Invalid data or validation error
           content:
             application/json:
               schema:
@@ -476,10 +527,28 @@ paths:
                   summary: Invalid balls
                   value:
                     error: "Invalid balls: must be exactly 5 unique integers between 1-50"
+                    field: "balls"
+                    timestamp: "2024-01-15T10:30:00Z"
                 invalid_stars:
                   summary: Invalid stars
                   value:
                     error: "Invalid stars: must be exactly 2 unique integers between 1-12"
+                    field: "stars"
+                    timestamp: "2024-01-15T10:30:00Z"
+                missing_fields:
+                  summary: Missing required fields
+                  value:
+                    error: "Missing required fields"
+                    details: "The following fields are required: email, balls, stars"
+                    field: "required_fields"
+                    timestamp: "2024-01-15T10:30:00Z"
+                invalid_content_type:
+                  summary: Invalid Content-Type
+                  value:
+                    error: "Invalid Content-Type"
+                    details: "Expected 'application/json', got 'text/plain'"
+                    field: "content_type"
+                    timestamp: "2024-01-15T10:30:00Z"
         '404':
           description: User not found
           content:
@@ -492,6 +561,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '413':
+          description: Payload too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Payload too large"
+                details: "Maximum allowed size is 1048576 bytes"
+                field: "payload_size"
+                timestamp: "2024-01-15T10:30:00Z"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Rate limit exceeded"
+                details: "Maximum 100 requests per 60 seconds"
+                field: "rate_limit"
+                timestamp: "2024-01-15T10:30:00Z"
 
   /combinations/{email}:
     get:
@@ -639,10 +730,43 @@ components:
         details:
           type: string
           description: Additional error information
+        field:
+          type: string
+          description: Field that caused the error
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
       required:
         - error
-      example:
-        error: "Invalid email format"
+      examples:
+        validation_error:
+          summary: Validation error
+          value:
+            error: "Invalid email format"
+            field: "email"
+            timestamp: "2024-01-15T10:30:00Z"
+        rate_limit_error:
+          summary: Rate limit exceeded
+          value:
+            error: "Rate limit exceeded"
+            details: "Maximum 100 requests per 60 seconds"
+            field: "rate_limit"
+            timestamp: "2024-01-15T10:30:00Z"
+        payload_size_error:
+          summary: Payload too large
+          value:
+            error: "Payload too large"
+            details: "Maximum allowed size is 1048576 bytes"
+            field: "payload_size"
+            timestamp: "2024-01-15T10:30:00Z"
+        content_type_error:
+          summary: Invalid Content-Type
+          value:
+            error: "Invalid Content-Type"
+            details: "Expected 'application/json', got 'text/plain'"
+            field: "content_type"
+            timestamp: "2024-01-15T10:30:00Z"
 
     LotteryResult:
       type: object

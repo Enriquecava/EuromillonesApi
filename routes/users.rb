@@ -3,6 +3,7 @@ require "sinatra"
 require "json"
 require_relative "../db"
 require_relative "../lib/validators"
+require_relative "../lib/validation_middleware"
 require_relative "../lib/app_logger"
 
 # ------------------------------
@@ -12,12 +13,32 @@ require_relative "../lib/app_logger"
 # ------------------------------
 get "/user/:email/delete-preview" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    skip_content_type: true
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status 400
+    return validation_result.to_json
+  end
+  
   email = nil
   begin
-    email = Validators.sanitize_email(params[:email])
+    # Get sanitized parameters
+    sanitized_params = validation_result
+    email = Validators.sanitize_email(sanitized_params["email"])
 
     unless Validators.valid_email?(email)
-      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
+      AppLogger.log_validation_error("email", sanitized_params["email"], "Invalid email format")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
+    end
+    
+    # Check for suspicious patterns
+    if Validators.contains_suspicious_patterns?(email)
+      AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
@@ -65,12 +86,32 @@ end
 # ------------------------------
 get "/user/:email" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    skip_content_type: true
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status 400
+    return validation_result.to_json
+  end
+  
   email = nil
   begin
-    email = Validators.sanitize_email(params[:email])
+    # Get sanitized parameters
+    sanitized_params = validation_result
+    email = Validators.sanitize_email(sanitized_params["email"])
 
     unless Validators.valid_email?(email)
-      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
+      AppLogger.log_validation_error("email", sanitized_params["email"], "Invalid email format")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
+    end
+    
+    # Check for suspicious patterns
+    if Validators.contains_suspicious_patterns?(email)
+      AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
@@ -104,13 +145,44 @@ end
 # ------------------------------
 post "/user" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    required_fields: ["email"],
+    type_schema: { email: :email }
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status_code = case validation_result["field"]
+    when "rate_limit"
+      429
+    when "payload_size"
+      413
+    when "content_type", "json_parse", "json_structure", "encoding"
+      400
+    else
+      400
+    end
+    status status_code
+    return validation_result.to_json
+  end
+  
   email = nil
   begin
-    payload = JSON.parse(request.body.read)
+    # Get validated payload
+    payload = validation_result
     email = Validators.sanitize_email(payload["email"])
 
+    # Additional business logic validation
     unless Validators.valid_email?(email)
       AppLogger.log_validation_error("email", payload["email"], "Invalid email format")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
+    end
+    
+    # Check for suspicious patterns
+    if Validators.contains_suspicious_patterns?(email)
+      AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
@@ -133,10 +205,6 @@ post "/user" do
     status 201
     { message: "User created", email: email }.to_json
 
-  rescue JSON::ParserError
-    AppLogger.warn("Invalid JSON in user creation request", "USERS")
-    status 400
-    { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
     AppLogger.log_db_error("INSERT user", e, { email: email })
     status 500
@@ -151,11 +219,34 @@ end
 # ------------------------------
 put "/user/:email" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    required_fields: ["email"],
+    type_schema: { email: :email }
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status_code = case validation_result["field"]
+    when "rate_limit"
+      429
+    when "payload_size"
+      413
+    when "content_type", "json_parse", "json_structure", "encoding"
+      400
+    else
+      400
+    end
+    status status_code
+    return validation_result.to_json
+  end
+  
   old_email = nil
   new_email = nil
   begin
+    # Get validated payload and sanitized params
+    payload = validation_result
     old_email = Validators.sanitize_email(params[:email])
-    payload = JSON.parse(request.body.read)
     new_email = Validators.sanitize_email(payload["email"])
 
     unless Validators.valid_email?(old_email)
@@ -168,6 +259,13 @@ put "/user/:email" do
       AppLogger.log_validation_error("new_email", payload["email"], "Invalid new email format")
       status 400
       return Validators.validation_error("Invalid new email format", "new_email").to_json
+    end
+    
+    # Check for suspicious patterns in both emails
+    if Validators.contains_suspicious_patterns?(old_email) || Validators.contains_suspicious_patterns?(new_email)
+      AppLogger.log_validation_error("email", "#{old_email} -> #{new_email}", "Suspicious patterns detected in email")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
     end
     
     AppLogger.debug("Updating user email: #{old_email} -> #{new_email}", "USERS")
@@ -191,10 +289,6 @@ put "/user/:email" do
     AppLogger.warn("Unique violation when updating user email: #{old_email || 'unknown'} -> #{new_email || 'unknown'}", "USERS")
     status 409
     { error: "New email already exists" }.to_json
-  rescue JSON::ParserError
-    AppLogger.warn("Invalid JSON in user update request", "USERS")
-    status 400
-    { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
     AppLogger.log_db_error("UPDATE user", e, { old_email: old_email, new_email: new_email })
     status 500
@@ -209,12 +303,32 @@ end
 # ------------------------------
 delete "/user/:email" do
   content_type :json
+  
+  # Apply validation middleware
+  validation_result = ValidationMiddleware.validate_request(request, {
+    skip_content_type: true
+  })
+  
+  if validation_result.is_a?(Hash) && validation_result.key?("error")
+    status 400
+    return validation_result.to_json
+  end
+  
   email = nil
   begin
-    email = Validators.sanitize_email(params[:email])
+    # Get sanitized parameters
+    sanitized_params = validation_result
+    email = Validators.sanitize_email(sanitized_params["email"])
 
     unless Validators.valid_email?(email)
-      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
+      AppLogger.log_validation_error("email", sanitized_params["email"], "Invalid email format")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
+    end
+    
+    # Check for suspicious patterns
+    if Validators.contains_suspicious_patterns?(email)
+      AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
