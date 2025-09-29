@@ -13,3 +13,6 @@ gem "puma", "~> 7.0"
 gem "playwright-ruby-client"
 gem "pg"
 gem "dotenv"
+
+# Swagger/OpenAPI documentation
+gem "rack-cors"

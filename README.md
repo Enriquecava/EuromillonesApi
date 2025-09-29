@@ -9,6 +9,7 @@ A REST API built with Ruby and Sinatra for querying Euromillions lottery results
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [API Endpoints](#api-endpoints)
+- [Interactive API Documentation (Swagger UI)](#-interactive-api-documentation-swagger-ui)
 - [Scraper](#scraper)
 - [Project Structure](#project-structure)
 - [Validations](#validations)
@@ -24,6 +25,8 @@ A REST API built with Ruby and Sinatra for querying Euromillions lottery results
 - 📊 JSON response format
 - 🛡️ Robust error handling
 - ✅ Data validation with proper error messages
+- 📖 **Interactive API documentation with Swagger UI**
+- 🧪 **Built-in testing interface for all endpoints**
 
 ## 🚀 Installation
 
@@ -124,7 +127,42 @@ bundle exec ruby scrapper/scrapper.rb 2024-01-15
 
 > 📖 **For detailed usage examples:** See [docs/API_EXAMPLES.md](docs/API_EXAMPLES.md)
 
-## 🕷️ Scraper
+## 📖 Interactive API Documentation (Swagger UI)
+
+La API incluye documentación interactiva completa con Swagger UI que permite probar todos los endpoints directamente desde el navegador.
+
+### 🚀 Acceso a la documentación
+
+Una vez que el servidor esté ejecutándose, accede a:
+
+- **Swagger UI**: http://localhost:4567/docs
+- **Especificación JSON**: http://localhost:4567/swagger.json
+- **Especificación YAML**: http://localhost:4567/swagger.yaml
+
+### ✨ Características de Swagger UI
+
+- 🧪 **Interfaz de pruebas interactiva** - Ejecuta peticiones directamente
+- 📋 **Documentación completa** - Todos los endpoints, parámetros y respuestas
+- 🔍 **Casos de prueba incluidos** - Ejemplos con datos válidos e inválidos
+- 🛠️ **Generación automática de código** - Comandos curl listos para usar
+- ✅ **Validación en tiempo real** - Respuestas reales de la API
+
+### 🧪 Casos de prueba documentados
+
+- ✅ **Operaciones exitosas** con datos válidos
+- ❌ **Validación de errores** con datos faltantes/inválidos (emails, IDs, etc.)
+- 🔄 **Flujos completos** de usuario (crear usuario → añadir combinaciones)
+
+### 📊 Endpoints organizados por categorías
+
+- **System** - Información del sistema y health checks
+- **Results** - Consulta de resultados de Euromillones
+- **Users** - Gestión completa de usuarios (CRUD)
+- **Combinations** - Gestión de combinaciones de lotería
+
+> 💡 **Tip**: Usa Swagger UI para explorar la API y probar diferentes escenarios, incluyendo casos con datos faltantes o inválidos.
+
+## �️ Scraper
 
 The automated scraper fetches results from the official website.
 
@@ -150,6 +188,7 @@ EuromillonesApi/
 ├── db.rb                       # Database configuration
 ├── Gemfile                     # Ruby dependencies
 ├── README.md                   # Documentation
+├── swagger.yaml                # OpenAPI/Swagger specification
 ├── .env                        # Environment variables
 ├── lib/                        # Shared libraries
 │   └── validators.rb          # Data validation helpers
@@ -162,9 +201,12 @@ EuromillonesApi/
 │   ├── scrapper.rb            # Main script
 │   └── pom/                   # Page Object Model
 │       └── lottery_page.rb    # Web page interaction
+├── bruno/                      # Bruno API testing collection
+│   └── Euromillones/          # Test cases for all endpoints
 ├── docs/                       # Documentation
 │   ├── API_EXAMPLES.md        # Usage examples
-│   └── DATABASE_SCHEMA.sql    # Database setup
+│   ├── DATABASE_SCHEMA.sql    # Database setup
+│   └── VALIDATION_IMPLEMENTATION.md  # Validation details
 └── config/
     └── database.yml           # DB configuration
 ```

@@ -6,7 +6,7 @@ module Validators
   def self.valid_email?(email)
     return false if email.nil? || email.strip.empty?
     
-    email_regex = /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
+    email_regex = /\A[\w+.-]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
     email.strip.match?(email_regex) && email.length <= 255
   end
 

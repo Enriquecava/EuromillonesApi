@@ -78,7 +78,7 @@ end
 # ------------------------------
 # UPDATE user email
 # PUT /user/:email
-# Body: { "new_email": "new@example.com" }
+# Body: { "email": "new@example.com" }
 # ------------------------------
 put "/user/:email" do
   content_type :json

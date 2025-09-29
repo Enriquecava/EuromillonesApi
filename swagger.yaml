@@ -1,0 +1,898 @@
+
+openapi: 3.0.3
+info:
+  title: Euromillones Results API
+  description: |
+    Esta API permite consultar resultados de Euromillones, gestionar usuarios y sus combinaciones.
+    
+    ## Características principales:
+    - Consulta de resultados históricos por fecha
+    - Gestión completa de usuarios (CRUD)
+    - Gestión de combinaciones de lotería para usuarios
+    - Validación exhaustiva de datos de entrada
+    - Manejo de errores detallado
+    
+    ## Casos de prueba incluidos:
+    - ✅ Operaciones exitosas con datos válidos
+    - ❌ Validación de errores con datos faltantes/inválidos
+    - 🔄 Flujos completos de usuario
+  version: "1.0"
+  contact:
+    name: API Support
+    email: support@euromillones-api.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:4567
+    description: Servidor de desarrollo local
+
+tags:
+  - name: System
+    description: Información del sistema y health checks
+  - name: Results
+    description: Consulta de resultados de Euromillones
+  - name: Users
+    description: Gestión de usuarios
+  - name: Combinations
+    description: Gestión de combinaciones de lotería
+
+paths:
+  /:
+    get:
+      tags:
+        - System
+      summary: Información de la API
+      description: Obtiene información general sobre la API y sus endpoints disponibles
+      responses:
+        '200':
+          description: Información de la API
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api:
+                    type: string
+                    example: "Euromillones Results API"
+                  version:
+                    type: string
+                    example: "1.0"
+                  endpoints:
+                    type: object
+                    description: Lista de endpoints disponibles
+                  description:
+                    type: string
+                    example: "This API allows you to query Euromillones results, manage users and their combinations."
+
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Verifica el estado de la API y la conectividad con la base de datos
+      responses:
+        '200':
+          description: API funcionando correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  message:
+                    type: string
+                    example: "API is live and database is reachable"
+        '500':
+          description: Error en la API o base de datos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /results/{date}:
+    get:
+      tags:
+        - Results
+      summary: Obtener resultado por fecha
+      description: |
+        Consulta el resultado de Euromillones para una fecha específica.
+        
+        **Casos de prueba:**
+        - ✅ Fecha válida con resultado: `2024-01-15`
+        - ❌ Formato inválido: `2024-13-45`
+        - ❌ Fecha futura: `2025-12-31`
+        - ❌ Fecha sin resultado: `2020-01-01`
+      parameters:
+        - name: date
+          in: path
+          required: true
+          description: Fecha en formato YYYY-MM-DD
+          schema:
+            type: string
+            format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+            example: "2024-01-15"
+      responses:
+        '200':
+          description: Resultado encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LotteryResult'
+        '400':
+          description: Formato de fecha inválido o fecha futura
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_format:
+                  summary: Formato inválido
+                  value:
+                    error: "Invalid date format (use YYYY-MM-DD)"
+                future_date:
+                  summary: Fecha futura
+                  value:
+                    error: "Date cannot be in the future"
+        '404':
+          description: No se encontró resultado para esta fecha
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "No result found for this date"
+
+  /user:
+    post:
+      tags:
+        - Users
+      summary: Crear usuario
+      description: |
+        Crea un nuevo usuario con email único.
+        
+        **Casos de prueba:**
+        - ✅ Email válido: `{"email": "user@example.com"}`
+        - ❌ Email inválido: `{"email": "invalid-email"}`
+        - ❌ Email faltante: `{}`
+        - ❌ Email duplicado: email ya existente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+            examples:
+              valid_email:
+                summary: Email válido
+                value:
+                  email: "user@example.com"
+              invalid_email:
+                summary: Email inválido
+                value:
+                  email: "invalid-email"
+              missing_email:
+                summary: Email faltante
+                value: {}
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreateResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_email:
+                  summary: Email inválido
+                  value:
+                    error: "Invalid email format"
+                invalid_json:
+                  summary: JSON inválido
+                  value:
+                    error: "Invalid JSON"
+        '409':
+          description: Email ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Email already exists"
+
+  /user/{email}:
+    get:
+      tags:
+        - Users
+      summary: Obtener usuario
+      description: |
+        Obtiene información de un usuario por email.
+        
+        **Casos de prueba:**
+        - ✅ Email existente: `user@example.com`
+        - ❌ Email inválido: `invalid-email`
+        - ❌ Usuario no encontrado: `notfound@example.com`
+      parameters:
+        - name: email
+          in: path
+          required: true
+          description: Email del usuario
+          schema:
+            type: string
+            format: email
+            example: "user@example.com"
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Email inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Users
+      summary: Actualizar email de usuario
+      description: |
+        Actualiza el email de un usuario existente.
+        
+        **Casos de prueba:**
+        - ✅ Emails válidos: `{"email": "new@example.com"}`
+        - ❌ Email inválido: `{"email": "invalid"}`
+        - ❌ Usuario no encontrado: email inexistente en URL
+        - ❌ Nuevo email ya existe: email duplicado
+      parameters:
+        - name: email
+          in: path
+          required: true
+          description: Email actual del usuario
+          schema:
+            type: string
+            format: email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Email actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdateResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Nuevo email ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Users
+      summary: Eliminar usuario
+      description: |
+        Elimina un usuario por email.
+        
+        **Casos de prueba:**
+        - ✅ Usuario existente: `user@example.com`
+        - ❌ Email inválido: `invalid-email`
+        - ❌ Usuario no encontrado: `notfound@example.com`
+      parameters:
+        - name: email
+          in: path
+          required: true
+          description: Email del usuario a eliminar
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Usuario eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDeleteResponse'
+        '400':
+          description: Email inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /combinations:
+    post:
+      tags:
+        - Combinations
+      summary: Crear combinación
+      description: |
+        Crea una nueva combinación de lotería para un usuario.
+        
+        **Casos de prueba:**
+        - ✅ Datos válidos: 5 bolas (1-50), 2 estrellas (1-12)
+        - ❌ Email faltante: `{"balls": [1,2,3,4,5], "stars": [1,2]}`
+        - ❌ Bolas inválidas: menos de 5, fuera de rango, duplicadas
+        - ❌ Estrellas inválidas: menos de 2, fuera de rango, duplicadas
+        - ❌ Usuario no encontrado: email inexistente
+        - ❌ Combinación duplicada: misma combinación para el usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CombinationCreate'
+            examples:
+              valid_combination:
+                summary: Combinación válida
+                value:
+                  email: "user@example.com"
+                  balls: [7, 15, 23, 34, 42]
+                  stars: [3, 8]
+              missing_email:
+                summary: Email faltante
+                value:
+                  balls: [1, 2, 3, 4, 5]
+                  stars: [1, 2]
+              invalid_balls:
+                summary: Bolas inválidas
+                value:
+                  email: "user@example.com"
+                  balls: [1, 2, 3]
+                  stars: [1, 2]
+              duplicate_balls:
+                summary: Bolas duplicadas
+                value:
+                  email: "user@example.com"
+                  balls: [1, 1, 3, 4, 5]
+                  stars: [1, 2]
+      responses:
+        '201':
+          description: Combinación creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CombinationCreateResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid_balls:
+                  summary: Bolas inválidas
+                  value:
+                    error: "Invalid balls: must be exactly 5 unique integers between 1-50"
+                invalid_stars:
+                  summary: Estrellas inválidas
+                  value:
+                    error: "Invalid stars: must be exactly 2 unique integers between 1-12"
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Combinación ya existe para este usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /combinations/{email}:
+    get:
+      tags:
+        - Combinations
+      summary: Obtener combinaciones de usuario
+      description: |
+        Obtiene todas las combinaciones de un usuario.
+        
+        **Casos de prueba:**
+        - ✅ Usuario con combinaciones: `user@example.com`
+        - ✅ Usuario sin combinaciones: usuario existente sin combinaciones
+        - ❌ Email inválido: `invalid-email`
+        - ❌ Usuario no encontrado: `notfound@example.com`
+      parameters:
+        - name: email
+          in: path
+          required: true
+          description: Email del usuario
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Combinaciones del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCombinations'
+        '400':
+          description: Email inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /combinations/{id}:
+    put:
+      tags:
+        - Combinations
+      summary: Actualizar combinación
+      description: |
+        Actualiza una combinación existente.
+        
+        **Casos de prueba:**
+        - ✅ ID y datos válidos
+        - ❌ ID inválido: `abc` o `0`
+        - ❌ Combinación no encontrada: ID inexistente
+        - ❌ Datos inválidos: bolas/estrellas fuera de rango
+        - ❌ Combinación duplicada: nueva combinación ya existe para el usuario
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la combinación
+          schema:
+            type: integer
+            minimum: 1
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CombinationUpdate'
+      responses:
+        '200':
+          description: Combinación actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CombinationUpdateResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Combinación no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Combinación ya existe para este usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Combinations
+      summary: Eliminar combinación
+      description: |
+        Elimina una combinación por ID.
+        
+        **Casos de prueba:**
+        - ✅ ID válido existente: `123`
+        - ❌ ID inválido: `abc` o `0`
+        - ❌ Combinación no encontrada: ID inexistente
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la combinación a eliminar
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Combinación eliminada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CombinationDeleteResponse'
+        '400':
+          description: ID inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Combinación no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Descripción del error
+        details:
+          type: string
+          description: Información adicional del error
+      required:
+        - error
+      example:
+        error: "Invalid email format"
+
+    LotteryResult:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: Fecha del sorteo
+        balls:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 50
+          minItems: 5
+          maxItems: 5
+          description: Números principales (5 bolas)
+        stars:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 12
+          minItems: 2
+          maxItems: 2
+          description: Números estrella (2 estrellas)
+        jackpot:
+          type: object
+          description: Premios por categoría
+      required:
+        - date
+        - balls
+        - stars
+        - jackpot
+      example:
+        date: "2024-01-15"
+        balls: [7, 23, 34, 42, 48]
+        stars: [3, 8]
+        jackpot:
+          "5":
+            "2": "15000000.00"
+            "1": "250000.00"
+            "0": "50000.00"
+          "4":
+            "2": "5000.00"
+            "1": "500.00"
+            "0": "100.00"
+
+    UserCreate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email del usuario (debe ser único)
+      required:
+        - email
+      example:
+        email: "user@example.com"
+
+    UserCreateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - message
+        - email
+      example:
+        message: "User created"
+        email: "user@example.com"
+
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        user_id:
+          type: string
+          description: ID interno del usuario
+      required:
+        - email
+        - user_id
+      example:
+        email: "user@example.com"
+        user_id: "123"
+
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Nuevo email del usuario
+      required:
+        - email
+      example:
+        email: "new@example.com"
+
+    UserUpdateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        old_email:
+          type: string
+          format: email
+        new_email:
+          type: string
+          format: email
+      required:
+        - message
+        - old_email
+        - new_email
+      example:
+        message: "User email updated"
+        old_email: "user@example.com"
+        new_email: "new@example.com"
+
+    UserDeleteResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - message
+        - email
+      example:
+        message: "User deleted"
+        email: "user@example.com"
+
+    CombinationCreate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email del usuario propietario
+        balls:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 50
+          minItems: 5
+          maxItems: 5
+          description: 5 números principales únicos (1-50)
+        stars:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 12
+          minItems: 2
+          maxItems: 2
+          description: 2 números estrella únicos (1-12)
+      required:
+        - email
+        - balls
+        - stars
+      example:
+        email: "user@example.com"
+        balls: [7, 15, 23, 34, 42]
+        stars: [3, 8]
+
+    CombinationCreateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        email:
+          type: string
+          format: email
+        balls:
+          type: array
+          items:
+            type: integer
+        stars:
+          type: array
+          items:
+            type: integer
+        combination_id:
+          type: string
+          description: ID de la combinación creada
+      required:
+        - message
+        - email
+        - balls
+        - stars
+        - combination_id
+      example:
+        message: "Combination successfully added"
+        email: "user@example.com"
+        balls: [7, 15, 23, 34, 42]
+        stars: [3, 8]
+        combination_id: "456"
+
+    CombinationUpdate:
+      type: object
+      properties:
+        balls:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 50
+          minItems: 5
+          maxItems: 5
+          description: 5 números principales únicos (1-50)
+        stars:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 12
+          minItems: 2
+          maxItems: 2
+          description: 2 números estrella únicos (1-12)
+      required:
+        - balls
+        - stars
+      example:
+        balls: [5, 18, 27, 36, 45]
+        stars: [4, 9]
+
+    CombinationUpdateResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        id:
+          type: integer
+        balls:
+          type: array
+          items:
+            type: integer
+        stars:
+          type: array
+          items:
+            type: integer
+      required:
+        - message
+        - id
+        - balls
+        - stars
+      example:
+        message: "Combination updated"
+        id: 456
+        balls: [5, 18, 27, 36, 45]
+        stars: [4, 9]
+
+    CombinationDeleteResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        id:
+          type: integer
+      required:
+        - message
+        - id
+      example:
+        message: "Combination deleted"
+        id: 456
+
+    Combination:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID único de la combinación
+        balls:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 50
+          minItems: 5
+          maxItems: 5
+        stars:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 12
+          minItems: 2
+          maxItems: 2
+      required:
+        - id
+        - balls
+        - stars
+      example:
+        id: 456
+        balls: [7, 15, 23, 34, 42]
+        stars: [3, 8]
+
+    UserCombinations:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        combinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Combination'
+      required:
+        - email
+        - combinations
+      example:
+        email: "user@example.com"
+        combinations:
+          - id: 456
+            balls: [7, 15, 23, 34, 42]
+            stars: [3, 8]
+          - id: 457
+            balls: [1, 12, 25, 38, 49]
+            stars: [2, 11]
