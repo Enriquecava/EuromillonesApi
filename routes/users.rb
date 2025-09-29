@@ -11,6 +11,7 @@ require_relative "../lib/app_logger"
 # ------------------------------
 get "/user/:email" do
   content_type :json
+  email = nil
   begin
     email = Validators.sanitize_email(params[:email])
 
@@ -49,6 +50,7 @@ end
 # ------------------------------
 post "/user" do
   content_type :json
+  email = nil
   begin
     payload = JSON.parse(request.body.read)
     email = Validators.sanitize_email(payload["email"])
@@ -60,18 +62,18 @@ post "/user" do
     end
     
     AppLogger.debug("Creating user: #{email}", "USERS")
-    user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
-    if user.ntuples > 0
-        AppLogger.warn("Attempt to create existing user: #{email}", "USERS")
-        status 409
-        return { error: "Email already exists" }.to_json
-    end
-
-    # Insert user; if email exists, do nothing
-    DB.exec_params(
-      "INSERT INTO users (email) VALUES ($1) ON CONFLICT (email) DO NOTHING",
+    
+    # Use INSERT with ON CONFLICT to handle duplicates atomically
+    result = DB.exec_params(
+      "INSERT INTO users (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING id",
       [email]
     )
+
+    if result.ntuples.zero?
+      AppLogger.warn("Attempt to create existing user: #{email}", "USERS")
+      status 409
+      return { error: "Email already exists" }.to_json
+    end
 
     AppLogger.info("User created successfully: #{email}", "USERS")
     status 201
@@ -95,6 +97,8 @@ end
 # ------------------------------
 put "/user/:email" do
   content_type :json
+  old_email = nil
+  new_email = nil
   begin
     old_email = Validators.sanitize_email(params[:email])
     payload = JSON.parse(request.body.read)
@@ -113,29 +117,26 @@ put "/user/:email" do
     end
     
     AppLogger.debug("Updating user email: #{old_email} -> #{new_email}", "USERS")
-    new_mail_verification = DB.exec_params("SELECT * FROM users WHERE email = $1", [new_email])
-    old_mail_verification = DB.exec_params("SELECT * FROM users WHERE email = $1", [old_email])
-    if new_mail_verification.ntuples > 0
-        AppLogger.warn("Attempt to update to existing email: #{new_email}", "USERS")
-        status 409
-        return { error: "New email already exists" }.to_json
-    end
-    if old_mail_verification.ntuples == 0
-        AppLogger.warn("Attempt to update non-existent user: #{old_email}", "USERS")
-        status 404
-        return { error: "Old email not found" }.to_json
-    end
+    
+    # Use UPDATE with proper error handling for constraints
     result = DB.exec_params(
       "UPDATE users SET email = $1 WHERE email = $2",
       [new_email, old_email]
     )
+    
+    if result.cmd_tuples.zero?
+      AppLogger.warn("Attempt to update non-existent user: #{old_email}", "USERS")
+      status 404
+      return { error: "User not found" }.to_json
+    end
+    
     AppLogger.info("User email updated successfully: #{old_email} -> #{new_email}", "USERS")
     { message: "User email updated", old_email: old_email, new_email: new_email }.to_json
 
   rescue PG::UniqueViolation
-    AppLogger.warn("Unique violation when updating user email: #{old_email} -> #{new_email}", "USERS")
+    AppLogger.warn("Unique violation when updating user email: #{old_email || 'unknown'} -> #{new_email || 'unknown'}", "USERS")
     status 409
-    { error: "Email already exists" }.to_json
+    { error: "New email already exists" }.to_json
   rescue JSON::ParserError
     AppLogger.warn("Invalid JSON in user update request", "USERS")
     status 400
@@ -154,6 +155,7 @@ end
 # ------------------------------
 delete "/user/:email" do
   content_type :json
+  email = nil
   begin
     email = Validators.sanitize_email(params[:email])
 
@@ -164,14 +166,16 @@ delete "/user/:email" do
     end
 
     AppLogger.debug("Deleting user: #{email}", "USERS")
+    
+    # Delete user (combinations will be deleted by CASCADE constraint)
     result = DB.exec_params("DELETE FROM users WHERE email = $1", [email])
-    # we should delete user combinations also
+    
     if result.cmd_tuples.zero?
       AppLogger.warn("Attempt to delete non-existent user: #{email}", "USERS")
       status 404
       { error: "User not found" }.to_json
     else
-      AppLogger.info("User deleted successfully: #{email}", "USERS")
+      AppLogger.info("User deleted successfully: #{email} (and associated combinations)", "USERS")
       { message: "User deleted", email: email }.to_json
     end
 
