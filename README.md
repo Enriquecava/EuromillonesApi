@@ -10,6 +10,7 @@ A REST API built with Ruby and Sinatra for querying Euromillions lottery results
 - [Usage](#usage)
 - [API Endpoints](#api-endpoints)
 - [Interactive API Documentation (Swagger UI)](#-interactive-api-documentation-swagger-ui)
+- [Logging System](#-logging-system)
 - [Scraper](#scraper)
 - [Project Structure](#project-structure)
 - [Validations](#validations)
@@ -27,6 +28,8 @@ A REST API built with Ruby and Sinatra for querying Euromillions lottery results
 - ✅ Data validation with proper error messages
 - 📖 **Interactive API documentation with Swagger UI**
 - 🧪 **Built-in testing interface for all endpoints**
+- 📝 **Comprehensive logging system with request tracking**
+- 🔍 **Monitoring and debugging capabilities**
 
 ## 🚀 Installation
 
@@ -72,11 +75,19 @@ cp .env.example .env
 ### Environment Variables (.env)
 
 ```env
+# Database Configuration
 PG_HOST=localhost
 PG_PORT=5432
 PG_DB=euromillones_db
 PG_USER=your_username
 PG_PASSWORD=your_password
+
+# Application Configuration
+APP_ENV=development          # development, production, test
+APP_PORT=4567
+
+# Logging Configuration
+LOG_LEVEL=debug             # debug, info, warn, error, fatal
 ```
 
 ### Database Schema
@@ -160,9 +171,50 @@ Una vez que el servidor esté ejecutándose, accede a:
 - **Users** - Gestión completa de usuarios (CRUD)
 - **Combinations** - Gestión de combinaciones de lotería
 
-> 💡 **Tip**: Usa Swagger UI para explorar la API y probar diferentes escenarios, incluyendo casos con datos faltantes o inválidos.
+> 💡 **Tip**: Use Swagger UI to explore the API and test different scenarios, including cases with missing or invalid data.
 
-## �️ Scraper
+## 📝 Logging System
+
+The API includes a comprehensive logging system that records all operations, errors, and performance metrics.
+
+### 🚀 Logging Features
+
+- ✅ **Automatic HTTP request logging** with timing and status codes
+- ✅ **Module-based logging** (USERS, COMBINATIONS, RESULTS, SYSTEM, SCRAPER)
+- ✅ **Multiple log levels** (DEBUG, INFO, WARN, ERROR, FATAL)
+- ✅ **Automatic log rotation** (daily in production)
+- ✅ **Structured format** with timestamps and categories
+- ✅ **Database error logging** with full context
+- ✅ **Validation error logging** for debugging
+
+### 📊 Log Examples
+
+```
+[2025-09-29 13:52:48] INFO  STARTUP: Euromillones API starting up
+[2025-09-29 13:52:48] INFO  STARTUP: Environment: development
+[2025-09-29 13:52:50] DEBUG HTTP: Request started: GET /health
+[2025-09-29 13:52:50] INFO  SYSTEM: Health check passed - database is reachable
+[2025-09-29 13:52:50] INFO  HTTP: GET /health -> 200 (0.031s)
+```
+
+### ⚙️ Log Configuration
+
+Logs are automatically configured based on environment:
+
+- **development**: Console output with DEBUG level
+- **production**: `log/app.log` file with daily rotation
+- **test**: Separate `log/test.log` file
+
+### 📁 Log Location
+
+```
+log/
+├── app.log         # Production logs
+├── test.log        # Test logs
+└── *.log.YYYYMMDD  # Rotated files
+```
+
+## 🕷️ Scraper
 
 The automated scraper fetches results from the official website.
 
@@ -191,7 +243,8 @@ EuromillonesApi/
 ├── swagger.yaml                # OpenAPI/Swagger specification
 ├── .env                        # Environment variables
 ├── lib/                        # Shared libraries
-│   └── validators.rb          # Data validation helpers
+│   ├── validators.rb          # Data validation helpers
+│   └── app_logger.rb          # Logging system
 ├── routes/                     # Organized endpoints
 │   ├── system.rb              # System endpoints
 │   ├── users.rb               # User management
@@ -207,6 +260,9 @@ EuromillonesApi/
 │   ├── API_EXAMPLES.md        # Usage examples
 │   ├── DATABASE_SCHEMA.sql    # Database setup
 │   └── VALIDATION_IMPLEMENTATION.md  # Validation details
+├── log/                        # Log files
+│   ├── app.log                # Production logs
+│   └── test.log               # Test logs
 └── config/
     └── database.yml           # DB configuration
 ```

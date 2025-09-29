@@ -2,11 +2,13 @@ require "sinatra"
 require "json"
 require_relative "../db"
 require_relative "../lib/validators"
+require_relative "../lib/app_logger"
 
 
 # Home endpoint: info about the API
 get "/" do
   content_type :json
+  AppLogger.debug("API info endpoint accessed", "SYSTEM")
   {
     api: "Euromillones Results API",
     version: "1.0",
@@ -17,7 +19,7 @@ get "/" do
       update_user: "/user/:email (PUT)",
       delete_user: "/user/:email (DELETE)",
       add_combination: "/combinations (POST JSON)",
-      get_combinations: "/combinations/:user_id (GET)",
+      get_combinations: "/combinations/:email (GET)",
       update_combination: "/combinations/:id (PUT)",
       delete_combination: "/combinations/:id (DELETE)",
       health: "/health"
@@ -30,12 +32,15 @@ end
 get "/health" do
   content_type :json
 
+  AppLogger.debug("Health check requested", "SYSTEM")
   begin
     # Simple DB query to check if database is reachable
     DB.exec_params("SELECT 1")
+    AppLogger.info("Health check passed - database is reachable", "SYSTEM")
     status 200
     { status: "OK", message: "API is live and database is reachable" }.to_json
   rescue StandardError => e
+    AppLogger.error("Health check failed - database unreachable: #{e.message}", "SYSTEM")
     status 500
     { status: "ERROR", message: "API is down or database is unreachable", error: e.message }.to_json
   end

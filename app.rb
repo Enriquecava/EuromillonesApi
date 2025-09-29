@@ -3,16 +3,35 @@ require "json"
 require "yaml"
 require_relative "db"
 require_relative "lib/validators"
+require_relative "lib/app_logger"
 
-# Configurar CORS para Swagger UI
+# Configure CORS for Swagger UI
 configure do
   enable :cross_origin
+  # Initialize logging on application startup
+  AppLogger.info("Euromillones API starting up", "STARTUP")
+  AppLogger.info("Environment: #{ENV['APP_ENV'] || 'development'}", "STARTUP")
+  AppLogger.info("Log level: #{ENV['LOG_LEVEL'] || 'info'}", "STARTUP")
 end
 
 before do
   response.headers['Access-Control-Allow-Origin'] = '*'
   response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
   response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+  
+  # Log all requests (except OPTIONS)
+  unless request.request_method == 'OPTIONS'
+    @request_start_time = Time.now
+    AppLogger.debug("Request started: #{request.request_method} #{request.path_info}", "HTTP")
+  end
+end
+
+after do
+  # Log response (except OPTIONS)
+  unless request.request_method == 'OPTIONS'
+    duration = @request_start_time ? Time.now - @request_start_time : nil
+    AppLogger.log_request(request.request_method, request.path_info, response.status, duration)
+  end
 end
 
 options "*" do
@@ -22,13 +41,13 @@ options "*" do
   200
 end
 
-# Cargar rutas separadas
+# Load separate routes
 require_relative "routes/system"
 require_relative "routes/users"
 require_relative "routes/euromillones"
 require_relative "routes/combinations"
 
-# Rutas para Swagger UI
+# Routes for Swagger UI
 get "/swagger.yaml" do
   content_type "application/x-yaml"
   File.read("swagger.yaml")
@@ -109,10 +128,14 @@ end
 error do
   content_type :json
   status 500
-  { error: "Internal server error", details: env["sinatra.error"].message }.to_json
+  error_message = env["sinatra.error"].message
+  AppLogger.error("Internal server error: #{error_message}", "ERROR")
+  AppLogger.error("Backtrace: #{env["sinatra.error"].backtrace.first(5).join(', ')}", "ERROR")
+  { error: "Internal server error", details: error_message }.to_json
 end
 
 not_found do
   content_type :json
+  AppLogger.warn("404 Not Found: #{request.request_method} #{request.path_info}", "HTTP")
   { error: "Not found" }.to_json
 end

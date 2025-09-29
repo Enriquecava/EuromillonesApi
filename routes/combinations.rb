@@ -3,6 +3,7 @@ require "sinatra"
 require "json"
 require_relative "../db"
 require_relative "../lib/validators"
+require_relative "../lib/app_logger"
 
 # ------------------------------
 # CREATE a new combination for a user
@@ -19,24 +20,30 @@ post "/combinations" do
 
     # Validate email
     unless Validators.valid_email?(email)
+      AppLogger.log_validation_error("email", payload["email"], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
 
     # Validate balls
     unless Validators.valid_lottery_balls?(balls)
+      AppLogger.log_validation_error("balls", balls, "Invalid balls: must be exactly 5 unique integers between 1-50")
       status 400
       return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
     end
 
     # Validate stars
     unless Validators.valid_lottery_stars?(stars)
+      AppLogger.log_validation_error("stars", stars, "Invalid stars: must be exactly 2 unique integers between 1-12")
       status 400
       return Validators.validation_error("Invalid stars: must be exactly 2 unique integers between 1-12", "stars").to_json
     end
+    
+    AppLogger.debug("Creating combination for user: #{email}, balls: #{balls}, stars: #{stars}", "COMBINATIONS")
     # Check if user exists
     user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
     if user.ntuples == 0
+        AppLogger.warn("Attempt to create combination for non-existent user: #{email}", "COMBINATIONS")
         status 404
         return { error: "User not found" }.to_json
     end
@@ -46,6 +53,7 @@ post "/combinations" do
         [user[0]["id"], balls.to_json, stars.to_json]
     )
     if existing.ntuples > 0
+        AppLogger.warn("Attempt to create duplicate combination for user: #{email}", "COMBINATIONS")
         status 409
         return { error: "Combination already exists for this user" }.to_json
     end
@@ -55,13 +63,16 @@ post "/combinations" do
         [user[0]["id"], balls.to_json, stars.to_json]
     )
     combination_id = result[0]["id"]
+    AppLogger.info("Combination created successfully for user: #{email}, ID: #{combination_id}", "COMBINATIONS")
     status 201
     { message: "Combination successfully added", email: email, balls: balls, stars: stars, combination_id: combination_id }.to_json
 
   rescue JSON::ParserError
+    AppLogger.warn("Invalid JSON in combination creation request", "COMBINATIONS")
     status 400
     { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
+    AppLogger.log_db_error("INSERT combination", e, { email: email, balls: balls, stars: stars })
     status 500
     { error: "Database error", details: e.message }.to_json
   end
@@ -77,15 +88,20 @@ get "/combinations/:email" do
     email = Validators.sanitize_email(params[:email])
 
     unless Validators.valid_email?(email)
+      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
+    
+    AppLogger.debug("Fetching combinations for user: #{email}", "COMBINATIONS")
     user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
     if user.ntuples == 0
+        AppLogger.warn("Attempt to fetch combinations for non-existent user: #{email}", "COMBINATIONS")
         status 404
         return { error: "User not found" }.to_json
     end
     if user.ntuples >1
+        AppLogger.error("Database inconsistency: multiple users with same email: #{email}", "COMBINATIONS")
         status 500
         return { error: "Database inconsistency: multiple users with same email" }.to_json
     end
@@ -98,9 +114,11 @@ get "/combinations/:email" do
       }
     end
 
+    AppLogger.info("Fetched #{combinations.length} combinations for user: #{email}", "COMBINATIONS")
     { email: email, combinations: combinations }.to_json
 
   rescue PG::Error => e
+    AppLogger.log_db_error("SELECT combinations", e, { email: email })
     status 500
     { error: "Database error", details: e.message }.to_json
   end
@@ -115,6 +133,7 @@ put "/combinations/:id" do
   content_type :json
   begin
     unless Validators.valid_combination_id?(params[:id])
+      AppLogger.log_validation_error("id", params[:id], "Invalid combination ID")
       status 400
       return Validators.validation_error("Invalid combination ID", "id").to_json
     end
@@ -126,16 +145,19 @@ put "/combinations/:id" do
 
     # Validate balls
     unless Validators.valid_lottery_balls?(balls)
+      AppLogger.log_validation_error("balls", balls, "Invalid balls: must be exactly 5 unique integers between 1-50")
       status 400
       return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
     end
 
     # Validate stars
     unless Validators.valid_lottery_stars?(stars)
+      AppLogger.log_validation_error("stars", stars, "Invalid stars: must be exactly 2 unique integers between 1-12")
       status 400
       return Validators.validation_error("Invalid stars: must be exactly 2 unique integers between 1-12", "stars").to_json
     end
 
+    AppLogger.debug("Updating combination ID: #{id}, balls: #{balls}, stars: #{stars}", "COMBINATIONS")
     user = DB.exec_params(
         "SELECT user_id FROM combinations WHERE id = $1",
         [id]
@@ -143,6 +165,7 @@ put "/combinations/:id" do
     if user.ntuples > 0
         user_id = user[0]["user_id"]
     else
+        AppLogger.warn("Attempt to update non-existent combination: #{id}", "COMBINATIONS")
         status 404
         return { error: "Combination not found" }.to_json
     end
@@ -152,6 +175,7 @@ put "/combinations/:id" do
         [user_id, balls.to_json, stars.to_json]
     )
     if existing.ntuples > 0
+        AppLogger.warn("Attempt to update to duplicate combination for user_id: #{user_id}", "COMBINATIONS")
         status 409
         return { error: "Combination already exists for this user" }.to_json
     end
@@ -162,16 +186,20 @@ put "/combinations/:id" do
     )
 
     if result.cmd_tuples.zero?
+      AppLogger.warn("Attempt to update non-existent combination: #{id}", "COMBINATIONS")
       status 404
       { error: "Combination not found" }.to_json
     else
+      AppLogger.info("Combination updated successfully: ID #{id}", "COMBINATIONS")
       { message: "Combination updated", id: id, balls: balls, stars: stars }.to_json
     end
 
   rescue JSON::ParserError
+    AppLogger.warn("Invalid JSON in combination update request", "COMBINATIONS")
     status 400
     { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
+    AppLogger.log_db_error("UPDATE combination", e, { id: id, balls: balls, stars: stars })
     status 500
     { error: "Database error", details: e.message }.to_json
   end
@@ -185,22 +213,27 @@ delete "/combinations/:id" do
   content_type :json
   begin
     unless Validators.valid_combination_id?(params[:id])
+      AppLogger.log_validation_error("id", params[:id], "Invalid combination ID")
       status 400
       return Validators.validation_error("Invalid combination ID", "id").to_json
     end
 
     id = params[:id].to_i
 
+    AppLogger.debug("Deleting combination ID: #{id}", "COMBINATIONS")
     result = DB.exec_params("DELETE FROM combinations WHERE id = $1", [id])
 
     if result.cmd_tuples.zero?
+      AppLogger.warn("Attempt to delete non-existent combination: #{id}", "COMBINATIONS")
       status 404
       { error: "Combination not found" }.to_json
     else
+      AppLogger.info("Combination deleted successfully: ID #{id}", "COMBINATIONS")
       { message: "Combination deleted", id: id }.to_json
     end
 
   rescue PG::Error => e
+    AppLogger.log_db_error("DELETE combination", e, { id: id })
     status 500
     { error: "Database error", details: e.message }.to_json
   end

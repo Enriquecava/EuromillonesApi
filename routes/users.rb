@@ -3,6 +3,7 @@ require "sinatra"
 require "json"
 require_relative "../db"
 require_relative "../lib/validators"
+require_relative "../lib/app_logger"
 
 # ------------------------------
 # GET user by email
@@ -14,22 +15,27 @@ get "/user/:email" do
     email = Validators.sanitize_email(params[:email])
 
     unless Validators.valid_email?(email)
+      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
 
+    AppLogger.debug("Looking up user: #{email}", "USERS")
     result = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
 
     if result.ntuples.zero?
+      AppLogger.info("User not found: #{email}", "USERS")
       status 404
       { error: "User not found" }.to_json
     else
       user = result[0]
+      AppLogger.info("User found: #{email}", "USERS")
       { email: user["email"],
         user_id: user["id"]}.to_json
     end
 
   rescue PG::Error => e
+    AppLogger.log_db_error("SELECT user", e, { email: email })
     status 500
     { error: "Database error", details: e.message }.to_json
   end
@@ -48,11 +54,15 @@ post "/user" do
     email = Validators.sanitize_email(payload["email"])
 
     unless Validators.valid_email?(email)
+      AppLogger.log_validation_error("email", payload["email"], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
+    
+    AppLogger.debug("Creating user: #{email}", "USERS")
     user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
     if user.ntuples > 0
+        AppLogger.warn("Attempt to create existing user: #{email}", "USERS")
         status 409
         return { error: "Email already exists" }.to_json
     end
@@ -63,13 +73,16 @@ post "/user" do
       [email]
     )
 
+    AppLogger.info("User created successfully: #{email}", "USERS")
     status 201
     { message: "User created", email: email }.to_json
 
   rescue JSON::ParserError
+    AppLogger.warn("Invalid JSON in user creation request", "USERS")
     status 400
     { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
+    AppLogger.log_db_error("INSERT user", e, { email: email })
     status 500
     { error: "Database error", details: e.message }.to_json
   end
@@ -88,21 +101,27 @@ put "/user/:email" do
     new_email = Validators.sanitize_email(payload["email"])
 
     unless Validators.valid_email?(old_email)
+      AppLogger.log_validation_error("old_email", params[:email], "Invalid old email format")
       status 400
       return Validators.validation_error("Invalid old email format", "old_email").to_json
     end
 
     unless Validators.valid_email?(new_email)
+      AppLogger.log_validation_error("new_email", payload["email"], "Invalid new email format")
       status 400
       return Validators.validation_error("Invalid new email format", "new_email").to_json
     end
+    
+    AppLogger.debug("Updating user email: #{old_email} -> #{new_email}", "USERS")
     new_mail_verification = DB.exec_params("SELECT * FROM users WHERE email = $1", [new_email])
     old_mail_verification = DB.exec_params("SELECT * FROM users WHERE email = $1", [old_email])
-    if new_mail_verification.ntuples > 0 
+    if new_mail_verification.ntuples > 0
+        AppLogger.warn("Attempt to update to existing email: #{new_email}", "USERS")
         status 409
         return { error: "New email already exists" }.to_json
     end
     if old_mail_verification.ntuples == 0
+        AppLogger.warn("Attempt to update non-existent user: #{old_email}", "USERS")
         status 404
         return { error: "Old email not found" }.to_json
     end
@@ -110,15 +129,19 @@ put "/user/:email" do
       "UPDATE users SET email = $1 WHERE email = $2",
       [new_email, old_email]
     )
+    AppLogger.info("User email updated successfully: #{old_email} -> #{new_email}", "USERS")
     { message: "User email updated", old_email: old_email, new_email: new_email }.to_json
 
   rescue PG::UniqueViolation
+    AppLogger.warn("Unique violation when updating user email: #{old_email} -> #{new_email}", "USERS")
     status 409
     { error: "Email already exists" }.to_json
   rescue JSON::ParserError
+    AppLogger.warn("Invalid JSON in user update request", "USERS")
     status 400
     { error: "Invalid JSON" }.to_json
   rescue PG::Error => e
+    AppLogger.log_db_error("UPDATE user", e, { old_email: old_email, new_email: new_email })
     status 500
     { error: "Database error", details: e.message }.to_json
   end
@@ -135,20 +158,25 @@ delete "/user/:email" do
     email = Validators.sanitize_email(params[:email])
 
     unless Validators.valid_email?(email)
+      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
 
+    AppLogger.debug("Deleting user: #{email}", "USERS")
     result = DB.exec_params("DELETE FROM users WHERE email = $1", [email])
     # we should delete user combinations also
     if result.cmd_tuples.zero?
+      AppLogger.warn("Attempt to delete non-existent user: #{email}", "USERS")
       status 404
       { error: "User not found" }.to_json
     else
+      AppLogger.info("User deleted successfully: #{email}", "USERS")
       { message: "User deleted", email: email }.to_json
     end
 
   rescue PG::Error => e
+    AppLogger.log_db_error("DELETE user", e, { email: email })
     status 500
     { error: "Database error", details: e.message }.to_json
   end
