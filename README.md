@@ -1,6 +1,12 @@
 # EuromillonesApi
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/your-username/EuromillonesApi/releases/tag/v1.0.0)
+[![Ruby](https://img.shields.io/badge/ruby-3.0%2B-red.svg)](https://www.ruby-lang.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 A REST API built with Ruby and Sinatra for querying Euromillions lottery results and managing users with their favorite number combinations.
+
+> **🎉 Version 1.0.0 Released!** - This is the first stable release with all core features implemented, tested, and production-ready.
 
 ## 📋 Table of Contents
 
@@ -288,6 +294,18 @@ EuromillonesApi/
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+## 📈 Version History
+
+- **v1.0.0** (2024-09-29) - Initial stable release with full API functionality
+  - Complete CRUD operations for users and combinations
+  - Euromillions results querying system
+  - Comprehensive validation and security
+  - Interactive Swagger documentation
+  - Production-ready logging system
+  - Automated web scraper
+
+> 📋 **Full changelog:** See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 ## 📝 License
 
