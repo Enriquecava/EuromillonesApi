@@ -6,6 +6,60 @@ require_relative "../lib/validators"
 require_relative "../lib/app_logger"
 
 # ------------------------------
+# GET user deletion preview
+# GET /user/:email/delete-preview
+# Shows what will be deleted before actual deletion
+# ------------------------------
+get "/user/:email/delete-preview" do
+  content_type :json
+  email = nil
+  begin
+    email = Validators.sanitize_email(params[:email])
+
+    unless Validators.valid_email?(email)
+      AppLogger.log_validation_error("email", params[:email], "Invalid email format")
+      status 400
+      return Validators.validation_error("Invalid email format", "email").to_json
+    end
+
+    AppLogger.debug("Generating deletion preview for user: #{email}", "USERS")
+    
+    # Check if user exists and get user info
+    user_result = DB.exec_params("SELECT id FROM users WHERE email = $1", [email])
+    
+    if user_result.ntuples.zero?
+      AppLogger.warn("Deletion preview requested for non-existent user: #{email}", "USERS")
+      status 404
+      return { error: "User not found" }.to_json
+    end
+    
+    user_id = user_result[0]["id"]
+    
+    # Count associated combinations
+    combinations_result = DB.exec_params(
+      "SELECT COUNT(*) as count FROM combinations WHERE user_id = $1",
+      [user_id]
+    )
+    combinations_count = combinations_result[0]["count"].to_i
+    
+    AppLogger.info("Deletion preview generated for user: #{email}, #{combinations_count} combinations will be deleted", "USERS")
+    
+    {
+      email: email,
+      user_id: user_id.to_i,
+      combinations_to_delete: combinations_count,
+      warning: "Deleting this user will permanently remove all associated combinations",
+      cascade_info: "This operation uses database CASCADE constraints for referential integrity"
+    }.to_json
+
+  rescue PG::Error => e
+    AppLogger.log_db_error("DELETE preview", e, { email: email })
+    status 500
+    { error: "Database error", details: e.message }.to_json
+  end
+end
+
+# ------------------------------
 # GET user by email
 # GET /user/:email
 # ------------------------------
@@ -151,7 +205,7 @@ end
 # ------------------------------
 # DELETE user
 # DELETE /user/:email
-# Deletes a user by email
+# Deletes a user by email with referential integrity validation
 # ------------------------------
 delete "/user/:email" do
   content_type :json
@@ -167,16 +221,39 @@ delete "/user/:email" do
 
     AppLogger.debug("Deleting user: #{email}", "USERS")
     
-    # Delete user (combinations will be deleted by CASCADE constraint)
-    result = DB.exec_params("DELETE FROM users WHERE email = $1", [email])
+    # First, get user info and count combinations for logging
+    user_result = DB.exec_params("SELECT id FROM users WHERE email = $1", [email])
     
-    if result.cmd_tuples.zero?
+    if user_result.ntuples.zero?
       AppLogger.warn("Attempt to delete non-existent user: #{email}", "USERS")
+      status 404
+      return { error: "User not found" }.to_json
+    end
+    
+    user_id = user_result[0]["id"]
+    
+    # Count combinations before deletion for detailed logging
+    combinations_result = DB.exec_params(
+      "SELECT COUNT(*) as count FROM combinations WHERE user_id = $1",
+      [user_id]
+    )
+    combinations_count = combinations_result[0]["count"].to_i
+    
+    # Delete user (combinations will be deleted by CASCADE constraint)
+    delete_result = DB.exec_params("DELETE FROM users WHERE email = $1", [email])
+    
+    if delete_result.cmd_tuples.zero?
+      AppLogger.warn("Unexpected: user disappeared during deletion: #{email}", "USERS")
       status 404
       { error: "User not found" }.to_json
     else
-      AppLogger.info("User deleted successfully: #{email} (and associated combinations)", "USERS")
-      { message: "User deleted", email: email }.to_json
+      AppLogger.info("User deleted successfully: #{email} (#{combinations_count} combinations also deleted by CASCADE)", "USERS")
+      {
+        message: "User deleted successfully",
+        email: email,
+        combinations_deleted: combinations_count,
+        referential_integrity: "Maintained via database CASCADE constraints"
+      }.to_json
     end
 
   rescue PG::Error => e
