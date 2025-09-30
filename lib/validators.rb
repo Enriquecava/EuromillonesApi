@@ -129,7 +129,7 @@ module Validators
     clean_email = email.strip.downcase
     
     # Remove potentially dangerous characters
-    clean_email = clean_email.gsub(/[<>"'&;(){}[\]]/, '')
+    clean_email = clean_email.gsub(/[<>"'&;(){}]|[\[\]]/, '')
     
     # Ensure valid encoding
     unless clean_email.valid_encoding?
