@@ -8,7 +8,7 @@ require_relative "../lib/app_logger"
 
 # GET result by date (YYYY-MM-DD)
 get "/results/:date" do
-  # Apply validation middleware
+  # Apply validation middleware (but handle route params separately)
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -18,8 +18,9 @@ get "/results/:date" do
     return validation_result.to_json
   end
   
-  # Get sanitized parameters
-  sanitized_params = validation_result
+  # For route parameters, we need to sanitize them manually since
+  # request.params doesn't include route params, only query params
+  sanitized_params = ValidationMiddleware.sanitize_url_params(params)
   date_str = sanitized_params["date"]&.strip
 
   # Validate date format
