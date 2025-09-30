@@ -53,6 +53,14 @@ get "/results/:date" do
     return { error: "Date cannot be in the future" }.to_json
   end
 
+  # Check if it's a valid Euromillones draw day (Tuesday or Friday)
+  unless Validators.valid_euromillones_draw_day?(date_str)
+    day_name = date.strftime("%A")
+    AppLogger.log_validation_error("date", date_str, "#{day_name} is not a Euromillones draw day")
+    status 400
+    return { error: "No Euromillones draw on #{day_name}. Draws are held on Tuesdays and Fridays only." }.to_json
+  end
+
   AppLogger.debug("Searching for lottery result: #{date_str}", "RESULTS")
   # Search in database
   begin

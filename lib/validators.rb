@@ -121,6 +121,19 @@ module Validators
     true
   end
 
+  # Validate if date is a Euromillones draw day (Tuesday or Friday)
+  def self.valid_euromillones_draw_day?(date_str)
+    return false if date_str.nil? || date_str.strip.empty?
+    
+    begin
+      date = Date.strptime(date_str, "%Y-%m-%d")
+      draw_days = [2, 5]
+      draw_days.include?(date.wday)
+    rescue ArgumentError
+      false
+    end
+  end
+
   # Enhanced email sanitization
   def self.sanitize_email(email)
     return nil if email.nil?
