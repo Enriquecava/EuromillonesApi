@@ -8,7 +8,7 @@ require_relative "../lib/app_logger"
 
 # GET result by date (YYYY-MM-DD)
 get "/results/:date" do
-  # Apply validation middleware
+  # Apply validation middleware (but handle route params separately)
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -18,8 +18,9 @@ get "/results/:date" do
     return validation_result.to_json
   end
   
-  # Get sanitized parameters
-  sanitized_params = validation_result
+  # For route parameters, we need to sanitize them manually since
+  # request.params doesn't include route params, only query params
+  sanitized_params = ValidationMiddleware.sanitize_url_params(params)
   date_str = sanitized_params["date"]&.strip
 
   # Validate date format
@@ -50,6 +51,14 @@ get "/results/:date" do
     AppLogger.log_validation_error("date", date_str, "Date cannot be in the future")
     status 400
     return { error: "Date cannot be in the future" }.to_json
+  end
+
+  # Check if it's a valid Euromillones draw day (Tuesday or Friday)
+  unless Validators.valid_euromillones_draw_day?(date_str)
+    day_name = date.strftime("%A")
+    AppLogger.log_validation_error("date", date_str, "#{day_name} is not a Euromillones draw day")
+    status 400
+    return { error: "No Euromillones draw on #{day_name}. Draws are held on Tuesdays and Fridays only." }.to_json
   end
 
   AppLogger.debug("Searching for lottery result: #{date_str}", "RESULTS")
