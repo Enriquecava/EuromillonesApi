@@ -39,13 +39,20 @@ module ValidationMiddleware
     
     content_length = request.content_length
     
-    if content_length && content_length > MAX_PAYLOAD_SIZE
-      AppLogger.log_validation_error("payload_size", content_length, "Payload too large")
-      return {
-        error: "Payload too large",
-        details: "Maximum allowed size is #{MAX_PAYLOAD_SIZE} bytes",
-        field: "payload_size"
-      }
+    # Convert to integer safely
+    begin
+      content_length_int = content_length.to_i if content_length
+      if content_length_int && content_length_int > MAX_PAYLOAD_SIZE
+        AppLogger.log_validation_error("payload_size", content_length_int, "Payload too large")
+        return {
+          error: "Payload too large",
+          details: "Maximum allowed size is #{MAX_PAYLOAD_SIZE} bytes",
+          field: "payload_size"
+        }
+      end
+    rescue => e
+      # If conversion fails, log but don't block the request
+      AppLogger.log_validation_error("payload_size", content_length, "Invalid content length format: #{e.message}")
     end
     
     true
@@ -183,17 +190,26 @@ module ValidationMiddleware
     true
   end
   
-  # Enhanced URL parameter sanitization
+  # Enhanced URL parameter sanitization with URL decoding
   def self.sanitize_url_params(params)
+    require 'uri'
     sanitized = {}
     
     params.each do |key, value|
       next if value.nil?
       
-      # Convert to string and strip whitespace
-      clean_value = value.to_s.strip
+      # URL decode first (handles %40 -> @, etc.)
+      begin
+        decoded_value = URI.decode_www_form_component(value.to_s)
+      rescue => e
+        AppLogger.log_validation_error("url_decode", key, "Failed to decode URL parameter: #{e.message}")
+        decoded_value = value.to_s
+      end
       
-      # Remove potentially dangerous characters
+      # Convert to string and strip whitespace
+      clean_value = decoded_value.strip
+      
+      # Remove potentially dangerous characters (except @ which is valid in emails)
       clean_value = clean_value.gsub(/[<>'"&]/, '')
       
       # Validate encoding
@@ -274,6 +290,8 @@ module ValidationMiddleware
     end
     
     # For GET/DELETE requests, return sanitized params
+    # Note: request.params only includes query parameters, not route parameters
+    # Route parameters need to be passed separately by the route handler
     sanitize_url_params(request.params)
   end
 end

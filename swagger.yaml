@@ -13,7 +13,17 @@ info:
     - Detailed error handling
     - Enhanced security validations
     
+    ## 🔐 Authentication & RLS Security:
+    - **Authentication Required**: All API endpoints require Basic Authentication
+    - **Row Level Security (RLS)**: Database-level protection for all data access
+    - **Automatic Context**: User context is automatically set for each authenticated request
+    - **Database Protection**: Even if application code has vulnerabilities, data is protected at DB level
+    
     ## Security Features:
+    - 🔐 **Basic Authentication** required for all API endpoints
+    - 🛡️ **Row Level Security (RLS)** enabled on sensitive tables
+    - 🔒 **Database-level policies** prevent unauthorized data access
+    - 📊 **Audit logging** for all authentication attempts and data access
     - 🛡️ Rate limiting (10 requests per minute per IP)
     - 🔒 Content-Type validation for POST/PUT requests
     - 📏 Payload size limits (1MB maximum)
@@ -38,6 +48,9 @@ info:
 servers:
   - url: http://localhost:4567
     description: Local development server
+
+security:
+  - basicAuth: []
 
 tags:
   - name: System
@@ -112,11 +125,15 @@ paths:
       description: |
         Queries the Euromillones result for a specific date.
         
+        **🔐 Authentication Required**: This endpoint requires Basic Authentication.
+        
         **Test cases:**
         - ✅ Valid date with result: `2024-01-15`
         - ❌ Invalid format: `2024-13-45`
         - ❌ Future date: `2025-12-31`
         - ❌ Date without result: `2020-01-01`
+      security:
+        - basicAuth: []
       parameters:
         - name: date
           in: path
@@ -134,6 +151,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LotteryResult'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
         '400':
           description: Invalid date format or future date
           content:
@@ -166,11 +189,15 @@ paths:
       description: |
         Creates a new user with unique email.
         
+        **🔐 Authentication Required**: This endpoint requires Basic Authentication.
+        
         **Test cases:**
         - ✅ Valid email: `{"email": "user@example.com"}`
         - ❌ Invalid email: `{"email": "invalid-email"}`
         - ❌ Missing email: `{}`
         - ❌ Duplicate email: email already exists
+      security:
+        - basicAuth: []
       requestBody:
         required: true
         content:
@@ -196,6 +223,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserCreateResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
         '400':
           description: Invalid data or validation error
           content:
@@ -268,10 +301,14 @@ paths:
       description: |
         Gets user information by email.
         
+        **🔐 Authentication Required**: This endpoint requires Basic Authentication.
+        
         **Test cases:**
         - ✅ Existing email: `user@example.com`
         - ❌ Invalid email: `invalid-email`
         - ❌ User not found: `notfound@example.com`
+      security:
+        - basicAuth: []
       parameters:
         - name: email
           in: path
@@ -288,6 +325,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthError'
         '400':
           description: Invalid email
           content:
@@ -1153,3 +1196,56 @@ components:
           - id: 457
             balls: [1, 12, 25, 38, 49]
             stars: [2, 11]
+
+    AuthError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Authentication error message
+        details:
+          type: string
+          description: Additional authentication error information
+        field:
+          type: string
+          description: Authentication field that caused the error
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+      required:
+        - error
+      examples:
+        missing_auth:
+          summary: Missing authentication
+          value:
+            error: "Authentication required"
+            details: "Basic Authentication header is required"
+            field: "authorization"
+            timestamp: "2024-01-15T10:30:00Z"
+        invalid_credentials:
+          summary: Invalid credentials
+          value:
+            error: "Invalid credentials"
+            details: "Username or password is incorrect"
+            field: "credentials"
+            timestamp: "2024-01-15T10:30:00Z"
+        malformed_auth:
+          summary: Malformed authorization header
+          value:
+            error: "Invalid authorization header format"
+            details: "Expected 'Basic <base64-encoded-credentials>'"
+            field: "authorization_format"
+            timestamp: "2024-01-15T10:30:00Z"
+
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        Basic Authentication required for all API endpoints.
+        
+        **Example Authorization Header:**
+        ```
+        Authorization: Basic ZXVyb21pbGxvbmVzUmFmZmxlOmtpb2tlbmNhdmExNA==
+        ```

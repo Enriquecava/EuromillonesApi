@@ -4,11 +4,11 @@ require "yaml"
 require_relative "db"
 require_relative "lib/validators"
 require_relative "lib/app_logger"
+require_relative "lib/auth_middleware"
 
 # Configure CORS for Swagger UI
 configure do
   enable :cross_origin
-  # Initialize logging on application startup
   AppLogger.info("Euromillones API starting up", "STARTUP")
   AppLogger.info("Environment: #{ENV['APP_ENV'] || 'development'}", "STARTUP")
   AppLogger.info("Log level: #{ENV['LOG_LEVEL'] || 'info'}", "STARTUP")
@@ -23,11 +23,26 @@ before do
   unless request.request_method == 'OPTIONS'
     @request_start_time = Time.now
     AppLogger.debug("Request started: #{request.request_method} #{request.path_info}", "HTTP")
+    
+    # Apply authentication to API routes (not to docs, swagger, etc.)
+    if request.path_info.match?(/^\/(user|combinations|results)/)
+      auth_info = AuthMiddleware.authenticate_request(request)
+      
+      if auth_info.nil?
+        content_type :json
+        AppLogger.warn("Unauthorized access attempt to: #{request.path_info}", "AUTH")
+        halt 401, { error: "Authentication required. Use Basic Auth with nickname:password" }.to_json
+      end
+      
+      # Establecer contexto de autenticación para RLS
+      DatabaseConnection.set_user_context(DB, auth_info)
+      @current_auth_user = auth_info
+      AppLogger.info("Authenticated user #{auth_info[:nickname]} accessing #{request.path_info}", "AUTH")
+    end
   end
 end
 
 after do
-  # Log response (except OPTIONS)
   unless request.request_method == 'OPTIONS'
     duration = @request_start_time ? Time.now - @request_start_time : nil
     AppLogger.log_request(request.request_method, request.path_info, response.status, duration)

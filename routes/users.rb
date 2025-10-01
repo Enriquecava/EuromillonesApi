@@ -26,9 +26,19 @@ get "/user/:email/delete-preview" do
   
   email = nil
   begin
-    # Get sanitized parameters
-    sanitized_params = validation_result
-    email = Validators.sanitize_email(sanitized_params["email"])
+    # Get email from Sinatra route parameter and decode it
+    require 'uri'
+    raw_email = params[:email]
+    
+    # URL decode the email parameter
+    begin
+      decoded_email = URI.decode_www_form_component(raw_email)
+    rescue => e
+      AppLogger.log_validation_error("url_decode", raw_email, "Failed to decode URL parameter: #{e.message}")
+      decoded_email = raw_email
+    end
+    
+    email = Validators.sanitize_email(decoded_email)
 
     unless Validators.valid_email?(email)
       AppLogger.log_validation_error("email", sanitized_params["email"], "Invalid email format")
@@ -99,12 +109,22 @@ get "/user/:email" do
   
   email = nil
   begin
-    # Get sanitized parameters
-    sanitized_params = validation_result
-    email = Validators.sanitize_email(sanitized_params["email"])
+    # Get email from Sinatra route parameter and decode it
+    require 'uri'
+    raw_email = params[:email]
+    
+    # URL decode the email parameter
+    begin
+      decoded_email = URI.decode_www_form_component(raw_email)
+    rescue => e
+      AppLogger.log_validation_error("url_decode", raw_email, "Failed to decode URL parameter: #{e.message}")
+      decoded_email = raw_email
+    end
+    
+    email = Validators.sanitize_email(decoded_email)
 
     unless Validators.valid_email?(email)
-      AppLogger.log_validation_error("email", sanitized_params["email"], "Invalid email format")
+      AppLogger.log_validation_error("email", raw_email, "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
@@ -244,9 +264,20 @@ put "/user/:email" do
   old_email = nil
   new_email = nil
   begin
-    # Get validated payload and sanitized params
+    # Get validated payload and decode route parameter
     payload = validation_result
-    old_email = Validators.sanitize_email(params[:email])
+    
+    # URL decode the old email from route parameter
+    require 'uri'
+    raw_old_email = params[:email]
+    begin
+      decoded_old_email = URI.decode_www_form_component(raw_old_email)
+    rescue => e
+      AppLogger.log_validation_error("url_decode", raw_old_email, "Failed to decode URL parameter: #{e.message}")
+      decoded_old_email = raw_old_email
+    end
+    
+    old_email = Validators.sanitize_email(decoded_old_email)
     new_email = Validators.sanitize_email(payload["email"])
 
     unless Validators.valid_email?(old_email)
@@ -316,9 +347,19 @@ delete "/user/:email" do
   
   email = nil
   begin
-    # Get sanitized parameters
-    sanitized_params = validation_result
-    email = Validators.sanitize_email(sanitized_params["email"])
+    # Get email from Sinatra route parameter and decode it
+    require 'uri'
+    raw_email = params[:email]
+    
+    # URL decode the email parameter
+    begin
+      decoded_email = URI.decode_www_form_component(raw_email)
+    rescue => e
+      AppLogger.log_validation_error("url_decode", raw_email, "Failed to decode URL parameter: #{e.message}")
+      decoded_email = raw_email
+    end
+    
+    email = Validators.sanitize_email(decoded_email)
 
     unless Validators.valid_email?(email)
       AppLogger.log_validation_error("email", sanitized_params["email"], "Invalid email format")

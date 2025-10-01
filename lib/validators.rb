@@ -12,7 +12,8 @@ module Validators
     return false if email.length > 255 || email.length < 5
     
     # Enhanced email regex with stricter validation
-    email_regex = /\A[\w+.-]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
+    # Fixed: escape the dot in character class and allow dots in local part
+    email_regex = /\A[\w+\.-]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
     clean_email = email.strip.downcase
     
     # Basic format check
@@ -134,12 +135,16 @@ module Validators
     end
   end
 
-  # Enhanced email sanitization
+  # Enhanced email sanitization with URL decoding
   def self.sanitize_email(email)
     return nil if email.nil?
     
+    # URL decode first (handles %40 -> @, etc.)
+    require 'uri'
+    decoded_email = URI.decode_www_form_component(email.to_s)
+    
     # Basic sanitization
-    clean_email = email.strip.downcase
+    clean_email = decoded_email.strip.downcase
     
     # Remove potentially dangerous characters
     clean_email = clean_email.gsub(/[<>"'&;(){}]|[\[\]]/, '')

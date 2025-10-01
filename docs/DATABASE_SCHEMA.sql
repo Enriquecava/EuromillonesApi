@@ -45,10 +45,21 @@ CREATE TABLE results (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table: credentials
+-- Stores API access credentials for authenticated users
+CREATE TABLE credentials (
+    id SERIAL PRIMARY KEY,
+    nickname VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_combinations_user_id ON combinations(user_id);
 CREATE INDEX idx_results_date ON results(date);
+CREATE INDEX idx_credentials_nickname ON credentials(nickname);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -68,8 +79,12 @@ CREATE TRIGGER update_combinations_updated_at
     BEFORE UPDATE ON combinations 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_results_updated_at 
-    BEFORE UPDATE ON results 
+CREATE TRIGGER update_results_updated_at
+    BEFORE UPDATE ON results
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_credentials_updated_at
+    BEFORE UPDATE ON credentials
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample data for testing (optional)
@@ -83,9 +98,13 @@ INSERT INTO combinations (user_id, balls, stars) VALUES
     (1, '[7, 18, 29, 40, 50]', '[1, 11]'),
     (2, '[5, 15, 25, 35, 47]', '[2, 9]');
 
-INSERT INTO results (date, bolas, stars, jackpot) VALUES 
+INSERT INTO results (date, bolas, stars, jackpot) VALUES
     ('2024-01-15', '[7, 23, 34, 42, 48]', '[3, 8]', '{"5": {"2": "15000000.00", "1": "250000.00", "0": "50000.00"}, "4": {"2": "5000.00", "1": "500.00", "0": "100.00"}}'),
     ('2024-01-12', '[12, 19, 31, 44, 49]', '[4, 10]', '{"5": {"2": "12000000.00", "1": "200000.00", "0": "45000.00"}, "4": {"2": "4500.00", "1": "450.00", "0": "90.00"}}');
+
+-- Production credentials (nickname: "euromillonesRaffle", password: "kiokencava14")
+INSERT INTO credentials (nickname, password_hash) VALUES
+    ('euromillonesRaffle', '$2a$12$pHLYYJjCzhesrA2Yg61E5e/0ANzytlziwlqRGiNdInz1bTLyQL4y6');
 
 -- Views for common queries (optional)
 CREATE VIEW user_combinations AS
@@ -119,6 +138,7 @@ LIMIT 10;
 \d+ users;
 \d+ combinations;
 \d+ results;
+\d+ credentials;
 
 -- Show sample data
 SELECT 'Users:' as table_name;
@@ -129,3 +149,6 @@ SELECT * FROM user_combinations;
 
 SELECT 'Results:' as table_name;
 SELECT * FROM recent_results;
+
+SELECT 'Credentials:' as table_name;
+SELECT id, nickname, created_at FROM credentials;
