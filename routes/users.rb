@@ -26,11 +26,9 @@ get "/user/:email/delete-preview" do
   
   email = nil
   begin
-    # Get email from Sinatra route parameter and decode it
     require 'uri'
     raw_email = params[:email]
     
-    # URL decode the email parameter
     begin
       decoded_email = URI.decode_www_form_component(raw_email)
     rescue => e

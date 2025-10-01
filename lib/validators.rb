@@ -12,7 +12,6 @@ module Validators
     return false if email.length > 255 || email.length < 5
     
     # Enhanced email regex with stricter validation
-    # Fixed: escape the dot in character class and allow dots in local part
     email_regex = /\A[\w+\.-]+@[a-z\d-]+(\.[a-z\d-]+)*\.[a-z]+\z/i
     clean_email = email.strip.downcase
     
