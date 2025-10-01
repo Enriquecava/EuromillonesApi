@@ -1247,5 +1247,5 @@ components:
         
         **Example Authorization Header:**
         ```
-        Authorization: Basic ZXVyb21pbGxvbmVzUmFmZmxlOmtpb2tlbmNhdmExNA==
+        Authorization: Basic 
         ```
