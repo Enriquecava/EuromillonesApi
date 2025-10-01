@@ -1,12 +1,12 @@
 # EuromillonesApi
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/your-username/EuromillonesApi/releases/tag/v1.0.0)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/your-username/EuromillonesApi/releases/tag/v1.1.0)
 [![Ruby](https://img.shields.io/badge/ruby-3.0%2B-red.svg)](https://www.ruby-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A REST API built with Ruby and Sinatra for querying Euromillions lottery results and managing users with their favorite number combinations.
 
-> **🎉 Version 1.0.0 Released!** - This is the first stable release with all core features implemented, tested, and production-ready.
+> **🔐 Version 1.1.0 Released!** - Enhanced security with Row Level Security (RLS) and Basic Authentication. **BREAKING CHANGES**: All endpoints now require authentication.
 
 ## 📋 Table of Contents
 
@@ -36,6 +36,10 @@ A REST API built with Ruby and Sinatra for querying Euromillions lottery results
 - 🧪 **Built-in testing interface for all endpoints**
 - 📝 **Comprehensive logging system with request tracking**
 - 🔍 **Monitoring and debugging capabilities**
+- 🔐 **Basic Authentication required for all endpoints**
+- 🛡️ **Row Level Security (RLS) for database-level protection**
+- 🔒 **Automatic user context isolation**
+- 🔑 **bcrypt password hashing for secure credential storage**
 
 ## 🚀 Installation
 
@@ -102,8 +106,25 @@ LOG_LEVEL=debug             # debug, info, warn, error, fatal
 
 Main tables:
 - `users` - User information
-- `combinations` - Number combinations per user  
+- `combinations` - Number combinations per user
 - `results` - Historical lottery results
+- `credentials` - User authentication credentials (bcrypt hashed)
+
+### 🔐 Security Features
+
+> **⚠️ BREAKING CHANGES in v1.1.0**: All API endpoints now require Basic Authentication
+
+- **Row Level Security (RLS)** - Database-level data isolation
+- **Basic Authentication** - Required for all endpoints except system routes
+- **bcrypt Password Hashing** - Secure credential storage
+- **Automatic User Context** - RLS policies enforce data access by authenticated user
+- **Database-level Protection** - Even if application code has vulnerabilities, data is protected
+
+### Authentication Setup
+
+1. **Create user credentials** (see migration script in `docs/DATABASE_SCHEMA.sql`)
+2. **Use Basic Auth header**: `Authorization: Basic <base64(username:password)>`
+3. **Example**: `Authorization: Basic ZXVyb21pbGxvbmVzUmFmZmxlOmtpb2tlbmNhdmExNA==`
 
 ## 🎯 Usage
 
@@ -296,6 +317,15 @@ EuromillonesApi/
 5. Open a Pull Request
 
 ## 📈 Version History
+
+- **v1.1.0** (2025-01-10) - Security enhancement with Row Level Security
+  - **BREAKING CHANGES**: Basic Authentication required for all endpoints
+  - PostgreSQL Row Level Security (RLS) implementation
+  - bcrypt password hashing for secure credentials
+  - Database-level data isolation per user
+  - Enhanced email validation with dot support
+  - URL parameter decoding for encoded emails
+  - Fixed payload size validation and middleware issues
 
 - **v1.0.0** (2024-09-29) - Initial stable release with full API functionality
   - Complete CRUD operations for users and combinations
