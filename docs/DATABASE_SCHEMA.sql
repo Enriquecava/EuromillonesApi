@@ -102,9 +102,8 @@ INSERT INTO results (date, bolas, stars, jackpot) VALUES
     ('2024-01-15', '[7, 23, 34, 42, 48]', '[3, 8]', '{"5": {"2": "15000000.00", "1": "250000.00", "0": "50000.00"}, "4": {"2": "5000.00", "1": "500.00", "0": "100.00"}}'),
     ('2024-01-12', '[12, 19, 31, 44, 49]', '[4, 10]', '{"5": {"2": "12000000.00", "1": "200000.00", "0": "45000.00"}, "4": {"2": "4500.00", "1": "450.00", "0": "90.00"}}');
 
--- Production credentials (nickname: "euromillonesRaffle", password: "kiokencava14")
+-- Production credentials (example, hashed password))
 INSERT INTO credentials (nickname, password_hash) VALUES
-    ('euromillonesRaffle', '$2a$12$pHLYYJjCzhesrA2Yg61E5e/0ANzytlziwlqRGiNdInz1bTLyQL4y6');
 
 -- Views for common queries (optional)
 CREATE VIEW user_combinations AS
