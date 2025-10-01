@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main, devel ]
+  push:
+    branches: [ main, devel ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: euromillones_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.1'
+        bundler-cache: true
+
+    - name: Set up test database
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/euromillones_test
+        PGPASSWORD: postgres
+      run: |
+        sudo apt-get -yqq install libpq-dev
+        createdb -h localhost -U postgres euromillones_test || true
+        psql -h localhost -U postgres -d euromillones_test -c "
+          CREATE TABLE IF NOT EXISTS results (
+            id SERIAL PRIMARY KEY,
+            date DATE NOT NULL UNIQUE,
+            bolas JSONB NOT NULL,
+            stars JSONB NOT NULL,
+            jackpot JSONB NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        "
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Run RSpec tests
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/euromillones_test
+        APP_ENV: test
+        LOG_LEVEL: error
+      run: bundle exec rspec --format progress --format RspecJunitFormatter --out tmp/rspec_results.xml
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: rspec-results
+        path: tmp/rspec_results.xml
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.1'
+        bundler-cache: true
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Check Ruby syntax
+      run: |
+        find . -name "*.rb" -not -path "./vendor/*" -exec ruby -c {} \;
+
+    - name: Security audit
+      run: |
+        gem install bundler-audit
+        bundle audit --update

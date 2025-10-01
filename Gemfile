@@ -17,3 +17,10 @@ gem "bcrypt", "~> 3.1"
 
 # Swagger/OpenAPI documentation
 gem "rack-cors"
+
+group :test do
+  gem "rspec", "~> 3.12"
+  gem "rack-test", "~> 2.1"
+  gem "rspec-json_expectations", "~> 2.2"
+  gem "rspec_junit_formatter", "~> 0.6"
+end
