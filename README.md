@@ -1,12 +1,12 @@
 # EuromillonesApi
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/your-username/EuromillonesApi/releases/tag/v1.1.0)
+[![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)](https://github.com/your-username/EuromillonesApi/releases/tag/v1.1.2)
 [![Ruby](https://img.shields.io/badge/ruby-3.0%2B-red.svg)](https://www.ruby-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A REST API built with Ruby and Sinatra for querying Euromillions lottery results and managing users with their favorite number combinations.
 
-> **🔐 Version 1.1.0 Released!** - Enhanced security with Row Level Security (RLS) and Basic Authentication. **BREAKING CHANGES**: All endpoints now require authentication.
+> **🔐 Version 1.1.2 Released!** - Enhanced security with Row Level Security (RLS) and Basic Authentication. **BREAKING CHANGES**: All endpoints now require authentication.
 
 ## 📋 Table of Contents
 
@@ -112,7 +112,7 @@ Main tables:
 
 ### 🔐 Security Features
 
-> **⚠️ BREAKING CHANGES in v1.1.0**: All API endpoints now require Basic Authentication
+> **⚠️ BREAKING CHANGES in v1.1.2**: All API endpoints now require Basic Authentication
 
 - **Row Level Security (RLS)** - Database-level data isolation
 - **Basic Authentication** - Required for all endpoints except system routes
@@ -317,6 +317,11 @@ EuromillonesApi/
 5. Open a Pull Request
 
 ## 📈 Version History
+
+- **v1.1.2** (2025-10-01) - Latest stable release with enhanced security
+  - Continued improvements and bug fixes
+  - Maintained compatibility with existing authentication system
+  - Enhanced documentation and examples
 
 - **v1.1.0** (2025-01-10) - Security enhancement with Row Level Security
   - **BREAKING CHANGES**: Basic Authentication required for all endpoints
