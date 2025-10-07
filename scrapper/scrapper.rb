@@ -4,15 +4,7 @@ require_relative "../lib/app_logger"
 require "pg"
 require "json"
 require "dotenv/load"
-
-DB = PG.connect(
-  host: ENV['PG_HOST'],
-  port: ENV['PG_PORT'],
-  dbname: ENV['PG_DB'],
-  user: ENV['PG_USER'],
-  password: ENV['PG_PASSWORD'],
-  sslmode: 'require'
-)
+require_relative "../db"
 
 
 def save_result(date_str, numbers, stars, prizes)
@@ -73,8 +65,7 @@ end
 if ARGV.any?
   date_str = ARGV[0]
   AppLogger.info("Scraper started with date argument: #{date_str}", "SCRAPER")
-  
-  # Validate date format
+
   unless date_str.match?(/^\d{4}-\d{2}-\d{2}$/)
     AppLogger.error("Invalid date format provided: #{date_str}. Expected YYYY-MM-DD", "SCRAPER")
     puts "Error: Invalid date format. Use YYYY-MM-DD"

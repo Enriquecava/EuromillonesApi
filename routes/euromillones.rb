@@ -8,7 +8,6 @@ require_relative "../lib/app_logger"
 
 # GET result by date (YYYY-MM-DD)
 get "/results/:date" do
-  # Apply validation middleware (but handle route params separately)
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -18,19 +17,15 @@ get "/results/:date" do
     return validation_result.to_json
   end
   
-  # For route parameters, we need to sanitize them manually since
-  # request.params doesn't include route params, only query params
   sanitized_params = ValidationMiddleware.sanitize_url_params(params)
   date_str = sanitized_params["date"]&.strip
 
-  # Validate date format
   unless Validators.valid_date_format?(date_str)
     AppLogger.log_validation_error("date", sanitized_params["date"], "Invalid date format (use YYYY-MM-DD)")
     status 400
     return Validators.validation_error("Invalid date format (use YYYY-MM-DD)", "date").to_json
   end
-  
-  # Check for suspicious patterns in date parameter
+
   if Validators.contains_suspicious_patterns?(date_str)
     AppLogger.log_validation_error("date", date_str, "Suspicious patterns detected in date parameter")
     status 400
@@ -38,22 +33,19 @@ get "/results/:date" do
   end
 
   begin
-    # Check if it's a real date
+
     date = Date.strptime(date_str, "%Y-%m-%d")
   rescue ArgumentError
     AppLogger.log_validation_error("date", date_str, "Invalid date (day or month does not exist)")
     status 400
     return { error: "Invalid date (day or month does not exist)" }.to_json
   end
-
-  # Check if it's in the future
   if date > Date.today
     AppLogger.log_validation_error("date", date_str, "Date cannot be in the future")
     status 400
     return { error: "Date cannot be in the future" }.to_json
   end
 
-  # Check if it's a valid Euromillones draw day (Tuesday or Friday)
   unless Validators.valid_euromillones_draw_day?(date_str)
     day_name = date.strftime("%A")
     AppLogger.log_validation_error("date", date_str, "#{day_name} is not a Euromillones draw day")
@@ -62,7 +54,7 @@ get "/results/:date" do
   end
 
   AppLogger.debug("Searching for lottery result: #{date_str}", "RESULTS")
-  # Search in database
+
   begin
     row = DB.exec_params("SELECT * FROM results WHERE date = $1", [date_str]).first
 
