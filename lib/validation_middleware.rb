@@ -1,4 +1,3 @@
-# lib/validation_middleware.rb
 # Centralized validation middleware for enhanced security and data validation
 
 require 'json'
@@ -6,19 +5,16 @@ require 'sinatra/base'
 require_relative 'app_logger'
 
 module ValidationMiddleware
-  # Maximum payload size (1MB)
+
   MAX_PAYLOAD_SIZE = 1_048_576
-  
-  # Rate limiting storage (simple in-memory for now)
+
   @@rate_limit_store = {}
-  @@rate_limit_window = 60 # 1 minute window
-  @@rate_limit_max_requests = 10 # max requests per window
-  
-  # Content-Type validation for JSON endpoints
+  @@rate_limit_window = 60 
+  @@rate_limit_max_requests = 10 
+
   def self.validate_content_type(request)
     content_type = request.content_type
-    
-    # Skip validation for GET requests
+
     return true if ['GET', 'DELETE'].include?(request.request_method)
     
     unless content_type&.include?('application/json')
@@ -32,14 +28,12 @@ module ValidationMiddleware
     
     true
   end
-  
-  # Payload size validation
+
   def self.validate_payload_size(request)
     return true if ['GET', 'DELETE'].include?(request.request_method)
     
     content_length = request.content_length
-    
-    # Convert to integer safely
+
     begin
       content_length_int = content_length.to_i if content_length
       if content_length_int && content_length_int > MAX_PAYLOAD_SIZE
@@ -51,24 +45,21 @@ module ValidationMiddleware
         }
       end
     rescue => e
-      # If conversion fails, log but don't block the request
+
       AppLogger.log_validation_error("payload_size", content_length, "Invalid content length format: #{e.message}")
     end
     
     true
   end
-  
-  # Rate limiting validation
+
   def self.validate_rate_limit(request)
     client_ip = request.ip
     current_time = Time.now.to_i
     window_start = current_time - @@rate_limit_window
-    
-    # Clean old entries
+
     @@rate_limit_store[client_ip] ||= []
     @@rate_limit_store[client_ip].reject! { |timestamp| timestamp < window_start }
-    
-    # Check current request count
+
     if @@rate_limit_store[client_ip].length >= @@rate_limit_max_requests
       AppLogger.log_validation_error("rate_limit", client_ip, "Rate limit exceeded")
       return {
@@ -77,17 +68,14 @@ module ValidationMiddleware
         field: "rate_limit"
       }
     end
-    
-    # Add current request
+
     @@rate_limit_store[client_ip] << current_time
     true
   end
-  
-  # Enhanced JSON parsing with better error handling
+
   def self.parse_json_safely(body_string)
     return {} if body_string.nil? || body_string.strip.empty?
-    
-    # Validate encoding
+
     unless body_string.valid_encoding?
       AppLogger.log_validation_error("encoding", "invalid", "Invalid character encoding")
       return {
@@ -99,8 +87,7 @@ module ValidationMiddleware
     
     begin
       parsed = JSON.parse(body_string)
-      
-      # Ensure it's a hash for our API
+
       unless parsed.is_a?(Hash)
         AppLogger.log_validation_error("json_structure", parsed.class, "JSON must be an object")
         return {
@@ -120,8 +107,7 @@ module ValidationMiddleware
       }
     end
   end
-  
-  # Validate required fields in payload
+
   def self.validate_required_fields(payload, required_fields)
     return true if payload.is_a?(Hash) && payload.key?("error")
     
@@ -146,8 +132,7 @@ module ValidationMiddleware
     
     true
   end
-  
-  # Validate data types in payload
+
   def self.validate_data_types(payload, type_schema)
     return true if payload.is_a?(Hash) && payload.key?("error")
     
@@ -169,7 +154,7 @@ module ValidationMiddleware
       when :array_of_integers
         value.is_a?(Array) && value.all? { |v| v.is_a?(Integer) }
       else
-        true # Unknown type, skip validation
+        true 
       end
       
       unless valid
@@ -189,30 +174,25 @@ module ValidationMiddleware
     
     true
   end
-  
-  # Enhanced URL parameter sanitization with URL decoding
+
   def self.sanitize_url_params(params)
     require 'uri'
     sanitized = {}
     
     params.each do |key, value|
       next if value.nil?
-      
-      # URL decode first (handles %40 -> @, etc.)
+
       begin
         decoded_value = URI.decode_www_form_component(value.to_s)
       rescue => e
         AppLogger.log_validation_error("url_decode", key, "Failed to decode URL parameter: #{e.message}")
         decoded_value = value.to_s
       end
-      
-      # Convert to string and strip whitespace
+
       clean_value = decoded_value.strip
-      
-      # Remove potentially dangerous characters (except @ which is valid in emails)
+
       clean_value = clean_value.gsub(/[<>'"&]/, '')
-      
-      # Validate encoding
+
       if clean_value.valid_encoding?
         sanitized[key] = clean_value
       else
@@ -223,64 +203,54 @@ module ValidationMiddleware
     
     sanitized
   end
-  
-  # Validate HTTP headers
+
   def self.validate_headers(request)
-    # Check for required headers in production
+
     user_agent = request.env['HTTP_USER_AGENT']
     
     if user_agent.nil? || user_agent.strip.empty?
       AppLogger.log_validation_error("user_agent", "missing", "Missing User-Agent header")
-      # Don't block request, just log for monitoring
+
     end
-    
-    # Check for suspicious headers
+
     if user_agent && user_agent.length > 1000
       AppLogger.log_validation_error("user_agent", "too_long", "Suspiciously long User-Agent header")
     end
     
     true
   end
-  
-  # Complete validation pipeline
+
   def self.validate_request(request, options = {})
-    # Extract options
+
     required_fields = options[:required_fields] || []
     type_schema = options[:type_schema] || {}
     skip_content_type = options[:skip_content_type] || false
     
-    # 1. Rate limiting
     rate_limit_result = validate_rate_limit(request)
     return rate_limit_result unless rate_limit_result == true
     
-    # 2. Headers validation
     validate_headers(request)
-    
-    # 3. Content-Type validation
+
     unless skip_content_type
       content_type_result = validate_content_type(request)
       return content_type_result unless content_type_result == true
     end
-    
-    # 4. Payload size validation
+
     payload_size_result = validate_payload_size(request)
     return payload_size_result unless payload_size_result == true
-    
-    # 5. JSON parsing and validation (for POST/PUT requests)
+
     if ['POST', 'PUT'].include?(request.request_method)
       body_string = request.body.read
-      request.body.rewind # Reset for potential re-reading
+      request.body.rewind
       
       parsed_payload = parse_json_safely(body_string)
       return parsed_payload if parsed_payload.is_a?(Hash) && parsed_payload.key?("error")
-      
-      # 6. Required fields validation
+
       unless required_fields.empty?
         required_fields_result = validate_required_fields(parsed_payload, required_fields)
         return required_fields_result unless required_fields_result == true
       end
-      
-      # 7. Data types validation
+
       unless type_schema.empty?
         data_types_result = validate_data_types(parsed_payload, type_schema)
         return data_types_result unless data_types_result == true
@@ -288,10 +258,6 @@ module ValidationMiddleware
       
       return parsed_payload
     end
-    
-    # For GET/DELETE requests, return sanitized params
-    # Note: request.params only includes query parameters, not route parameters
-    # Route parameters need to be passed separately by the route handler
     sanitize_url_params(request.params)
   end
 end

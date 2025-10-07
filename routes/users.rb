@@ -13,8 +13,7 @@ require_relative "../lib/app_logger"
 # ------------------------------
 get "/user/:email/delete-preview" do
   content_type :json
-  
-  # Apply validation middleware
+
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -43,8 +42,7 @@ get "/user/:email/delete-preview" do
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
-    
-    # Check for suspicious patterns
+
     if Validators.contains_suspicious_patterns?(email)
       AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
@@ -52,8 +50,7 @@ get "/user/:email/delete-preview" do
     end
 
     AppLogger.debug("Generating deletion preview for user: #{email}", "USERS")
-    
-    # Check if user exists and get user info
+
     user_result = DB.exec_params("SELECT id FROM users WHERE email = $1", [email])
     
     if user_result.ntuples.zero?
@@ -63,8 +60,7 @@ get "/user/:email/delete-preview" do
     end
     
     user_id = user_result[0]["id"]
-    
-    # Count associated combinations
+
     combinations_result = DB.exec_params(
       "SELECT COUNT(*) as count FROM combinations WHERE user_id = $1",
       [user_id]
@@ -94,8 +90,7 @@ end
 # ------------------------------
 get "/user/:email" do
   content_type :json
-  
-  # Apply validation middleware
+
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -107,11 +102,9 @@ get "/user/:email" do
   
   email = nil
   begin
-    # Get email from Sinatra route parameter and decode it
     require 'uri'
     raw_email = params[:email]
-    
-    # URL decode the email parameter
+
     begin
       decoded_email = URI.decode_www_form_component(raw_email)
     rescue => e
@@ -126,8 +119,7 @@ get "/user/:email" do
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
-    
-    # Check for suspicious patterns
+
     if Validators.contains_suspicious_patterns?(email)
       AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
@@ -163,8 +155,7 @@ end
 # ------------------------------
 post "/user" do
   content_type :json
-  
-  # Apply validation middleware
+
   validation_result = ValidationMiddleware.validate_request(request, {
     required_fields: ["email"],
     type_schema: { email: :email }
@@ -187,18 +178,15 @@ post "/user" do
   
   email = nil
   begin
-    # Get validated payload
     payload = validation_result
     email = Validators.sanitize_email(payload["email"])
 
-    # Additional business logic validation
     unless Validators.valid_email?(email)
       AppLogger.log_validation_error("email", payload["email"], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
-    
-    # Check for suspicious patterns
+
     if Validators.contains_suspicious_patterns?(email)
       AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
@@ -206,8 +194,7 @@ post "/user" do
     end
     
     AppLogger.debug("Creating user: #{email}", "USERS")
-    
-    # Use INSERT with ON CONFLICT to handle duplicates atomically
+
     result = DB.exec_params(
       "INSERT INTO users (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING id",
       [email]
@@ -237,8 +224,6 @@ end
 # ------------------------------
 put "/user/:email" do
   content_type :json
-  
-  # Apply validation middleware
   validation_result = ValidationMiddleware.validate_request(request, {
     required_fields: ["email"],
     type_schema: { email: :email }
@@ -262,10 +247,7 @@ put "/user/:email" do
   old_email = nil
   new_email = nil
   begin
-    # Get validated payload and decode route parameter
     payload = validation_result
-    
-    # URL decode the old email from route parameter
     require 'uri'
     raw_old_email = params[:email]
     begin
@@ -289,8 +271,7 @@ put "/user/:email" do
       status 400
       return Validators.validation_error("Invalid new email format", "new_email").to_json
     end
-    
-    # Check for suspicious patterns in both emails
+
     if Validators.contains_suspicious_patterns?(old_email) || Validators.contains_suspicious_patterns?(new_email)
       AppLogger.log_validation_error("email", "#{old_email} -> #{new_email}", "Suspicious patterns detected in email")
       status 400
@@ -298,8 +279,7 @@ put "/user/:email" do
     end
     
     AppLogger.debug("Updating user email: #{old_email} -> #{new_email}", "USERS")
-    
-    # Use UPDATE with proper error handling for constraints
+
     result = DB.exec_params(
       "UPDATE users SET email = $1 WHERE email = $2",
       [new_email, old_email]
@@ -332,8 +312,7 @@ end
 # ------------------------------
 delete "/user/:email" do
   content_type :json
-  
-  # Apply validation middleware
+
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -345,11 +324,10 @@ delete "/user/:email" do
   
   email = nil
   begin
-    # Get email from Sinatra route parameter and decode it
+
     require 'uri'
     raw_email = params[:email]
-    
-    # URL decode the email parameter
+
     begin
       decoded_email = URI.decode_www_form_component(raw_email)
     rescue => e
@@ -364,8 +342,7 @@ delete "/user/:email" do
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
-    
-    # Check for suspicious patterns
+
     if Validators.contains_suspicious_patterns?(email)
       AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
@@ -373,8 +350,7 @@ delete "/user/:email" do
     end
 
     AppLogger.debug("Deleting user: #{email}", "USERS")
-    
-    # First, get user info and count combinations for logging
+
     user_result = DB.exec_params("SELECT id FROM users WHERE email = $1", [email])
     
     if user_result.ntuples.zero?
@@ -384,15 +360,13 @@ delete "/user/:email" do
     end
     
     user_id = user_result[0]["id"]
-    
-    # Count combinations before deletion for detailed logging
+
     combinations_result = DB.exec_params(
       "SELECT COUNT(*) as count FROM combinations WHERE user_id = $1",
       [user_id]
     )
     combinations_count = combinations_result[0]["count"].to_i
-    
-    # Delete user (combinations will be deleted by CASCADE constraint)
+
     delete_result = DB.exec_params("DELETE FROM users WHERE email = $1", [email])
     
     if delete_result.cmd_tuples.zero?
