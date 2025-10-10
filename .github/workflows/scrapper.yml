@@ -35,3 +35,9 @@ jobs:
           DATE=$(date +%F)
           echo "Running scraper for date: $DATE"
           bundle exec ruby scrapper/scrapper.rb $DATE
+      
+      - name: Run prize winners script
+        run: |
+          DATE=$(date +%F)
+          echo "Running prize winners script for date: $DATE"
+          bundle exec ruby prize_winners.rb $DATE 
