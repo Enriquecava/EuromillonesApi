@@ -58,7 +58,6 @@ end
 get "/health" do
   content_type :json
 
-  # Apply validation middleware (basic rate limiting and header validation)
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -76,7 +75,7 @@ get "/health" do
 
   AppLogger.debug("Health check requested", "SYSTEM")
   begin
-    # Simple DB query to check if database is reachable
+
     DB.exec_params("SELECT 1")
     AppLogger.info("Health check passed - database is reachable", "SYSTEM")
     status 200

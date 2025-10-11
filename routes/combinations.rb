@@ -13,8 +13,6 @@ require_relative "../lib/app_logger"
 # ------------------------------
 post "/combinations" do
   content_type :json
-  
-  # Apply validation middleware
   validation_result = ValidationMiddleware.validate_request(request, {
     required_fields: ["email", "balls", "stars"],
     type_schema: {
@@ -40,34 +38,28 @@ post "/combinations" do
   end
   
   begin
-    # Get validated payload
     payload = validation_result
     email = Validators.sanitize_email(payload["email"])
     balls = payload["balls"]
     stars = payload["stars"]
-
-    # Additional business logic validation
     unless Validators.valid_email?(email)
       AppLogger.log_validation_error("email", payload["email"], "Invalid email format")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
-    
-    # Check for suspicious patterns in email
+
     if Validators.contains_suspicious_patterns?(email)
       AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
 
-    # Enhanced lottery balls validation
     unless Validators.valid_lottery_balls?(balls)
       AppLogger.log_validation_error("balls", balls, "Invalid balls: must be exactly 5 unique integers between 1-50")
       status 400
       return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
     end
 
-    # Enhanced lottery stars validation
     unless Validators.valid_lottery_stars?(stars)
       AppLogger.log_validation_error("stars", stars, "Invalid stars: must be exactly 2 unique integers between 1-12")
       status 400
@@ -75,7 +67,6 @@ post "/combinations" do
     end
     
     AppLogger.debug("Creating combination for user: #{email}, balls: #{balls}, stars: #{stars}", "COMBINATIONS")
-    # Check if user exists
     user = DB.exec_params("SELECT * FROM users WHERE email = $1", [email])
     if user.ntuples == 0
         AppLogger.warn("Attempt to create combination for non-existent user: #{email}", "COMBINATIONS")
@@ -92,7 +83,6 @@ post "/combinations" do
         status 409
         return { error: "Combination already exists for this user" }.to_json
     end
-     # Insert new combination
     result = DB.exec_params(
         "INSERT INTO combinations (user_id, balls, stars) VALUES ($1, $2, $3) RETURNING id",
         [user[0]["id"], balls.to_json, stars.to_json]
@@ -115,8 +105,6 @@ end
 # ------------------------------
 get "/combinations/:email" do
   content_type :json
-  
-  # Apply validation middleware
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -144,8 +132,7 @@ get "/combinations/:email" do
       status 400
       return Validators.validation_error("Invalid email format", "email").to_json
     end
-    
-    # Check for suspicious patterns
+
     if Validators.contains_suspicious_patterns?(email)
       AppLogger.log_validation_error("email", email, "Suspicious patterns detected in email")
       status 400
@@ -159,11 +146,13 @@ get "/combinations/:email" do
         status 404
         return { error: "User not found" }.to_json
     end
+
     if user.ntuples >1
         AppLogger.error("Database inconsistency: multiple users with same email: #{email}", "COMBINATIONS")
         status 500
         return { error: "Database inconsistency: multiple users with same email" }.to_json
     end
+
     result = DB.exec_params("SELECT * FROM combinations WHERE user_id = $1", [user[0]["id"]])
     combinations = result.map do |row|
       {
@@ -190,8 +179,7 @@ end
 # ------------------------------
 put "/combinations/:id" do
   content_type :json
-  
-  # Apply validation middleware
+
   validation_result = ValidationMiddleware.validate_request(request, {
     required_fields: ["balls", "stars"],
     type_schema: {
@@ -216,7 +204,6 @@ put "/combinations/:id" do
   end
   
   begin
-    # Validate combination ID from URL parameter
     unless Validators.valid_combination_id?(params[:id])
       AppLogger.log_validation_error("id", params[:id], "Invalid combination ID")
       status 400
@@ -224,20 +211,16 @@ put "/combinations/:id" do
     end
 
     id = params[:id].to_i
-    
-    # Get validated payload
     payload = validation_result
     balls = payload["balls"]
     stars = payload["stars"]
 
-    # Enhanced lottery balls validation
     unless Validators.valid_lottery_balls?(balls)
       AppLogger.log_validation_error("balls", balls, "Invalid balls: must be exactly 5 unique integers between 1-50")
       status 400
       return Validators.validation_error("Invalid balls: must be exactly 5 unique integers between 1-50", "balls").to_json
     end
 
-    # Enhanced lottery stars validation
     unless Validators.valid_lottery_stars?(stars)
       AppLogger.log_validation_error("stars", stars, "Invalid stars: must be exactly 2 unique integers between 1-12")
       status 400
@@ -294,8 +277,7 @@ end
 # ------------------------------
 delete "/combinations/:id" do
   content_type :json
-  
-  # Apply validation middleware
+
   validation_result = ValidationMiddleware.validate_request(request, {
     skip_content_type: true
   })
@@ -306,7 +288,6 @@ delete "/combinations/:id" do
   end
   
   begin
-    # Validate combination ID from URL parameter
     unless Validators.valid_combination_id?(params[:id])
       AppLogger.log_validation_error("id", params[:id], "Invalid combination ID")
       status 400
