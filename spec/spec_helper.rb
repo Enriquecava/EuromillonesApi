@@ -6,6 +6,7 @@ require 'date'
 ENV['RACK_ENV'] = 'test'
 
 require_relative '../routes/result'
+require_relative '../routes/users'
 
 RSpec.configure do |config|
 
@@ -28,6 +29,8 @@ RSpec.configure do |config|
     allow(Validators).to receive(:valid_date_format?).and_return(true)
     allow(Validators).to receive(:contains_suspicious_patterns?).and_return(false)
     allow(Validators).to receive(:valid_euromillones_draw_day?).and_return(false)
+    allow(Validators).to receive(:sanitize_email) { |email| email }
+    allow(Validators).to receive(:valid_email?).and_return(true)
     allow(Validators).to receive(:validation_error).and_return({ error: 'validation failed' })
 
     stub_const('ValidationMiddleware', Module.new)

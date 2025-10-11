@@ -1,9 +1,8 @@
-# spec/results_spec.rb
 require 'spec_helper'
 
 RSpec.describe 'GET /results/:date' do
-  previous_wednesday = (Date.today - ((2 - Date.today.wday) % 7)).strftime("%Y-%m-%d")
-  future_date = (Date.today + 3).strftime("%Y-%m-%d")
+  let(:previous_wednesday) { (Date.today - ((2 - Date.today.wday) % 7)).strftime("%Y-%m-%d") }
+  let(:future_date) { (Date.today + 3).strftime("%Y-%m-%d") }
 
   context 'when the lottery result exists in the database' do
     it 'returns the result in JSON format' do
