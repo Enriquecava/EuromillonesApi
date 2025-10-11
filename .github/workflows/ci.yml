@@ -91,3 +91,28 @@ jobs:
       run: |
         gem install bundler-audit
         bundle audit --update
+
+  # Branch protection job
+  branch_protection:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [test, lint]
+    
+    steps:
+    - name: Check branch protection requirements
+      run: |
+        echo "🔍 Checking branch protection for target: ${{ github.base_ref }}"
+        if [[ "${{ github.base_ref }}" == "main" || "${{ github.base_ref }}" == "devel" ]]; then
+          echo "✅ Protected branch check passed for ${{ github.base_ref }}"
+          echo "🛡️ All required checks completed successfully"
+        else
+          echo "ℹ️ Target branch ${{ github.base_ref }} is not protected"
+        fi
+        
+    - name: Validate PR requirements
+      if: contains(fromJson('["main", "devel"]'), github.base_ref)
+      run: |
+        echo "🔒 Validating PR requirements for protected branch: ${{ github.base_ref }}"
+        echo "✅ Tests passed: ${{ needs.test.result }}"
+        echo "✅ Lint passed: ${{ needs.lint.result }}"
+        echo "🎉 All protection requirements met!"

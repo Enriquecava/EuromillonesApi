@@ -1,0 +1,76 @@
+# Overcommit configuration for EuromillonesApi
+# https://github.com/sds/overcommit
+
+# Uncomment the following lines to make Overcommit automatically attempt to
+# install itself in any repository that has this file
+# install_command: 'gem install overcommit --no-document'
+# verify_signatures: false
+
+# Hooks that run before commits
+PreCommit:
+  RSpec:
+    enabled: true
+    command: ['bundle', 'exec', 'rspec']
+    required_executable: 'bundle'
+    flags: ['--format', 'progress', '--fail-fast']
+    problem_on: warn
+    description: 'Run RSpec tests before commit'
+    
+  RubySyntax:
+    enabled: true
+    description: 'Check Ruby syntax'
+    include: '**/*.rb'
+    
+  TrailingWhitespace:
+    enabled: true
+    exclude:
+      - '**/*.md'
+      - '**/*.yml'
+      - '**/*.yaml'
+    description: 'Check for trailing whitespace'
+    
+  LineEndings:
+    enabled: true
+    description: 'Check for consistent line endings'
+    
+  MergeConflicts:
+    enabled: true
+    description: 'Check for merge conflict markers'
+
+# Hooks that run before pushes
+PrePush:
+  RSpec:
+    enabled: true
+    command: ['bundle', 'exec', 'rspec']
+    description: 'Run full RSpec test suite before push'
+    flags: ['--format', 'documentation']
+
+# Hooks that run on commit messages
+CommitMsg:
+  CapitalizedSubject:
+    enabled: true
+    description: 'Check subject line starts with capital letter'
+    
+  EmptyMessage:
+    enabled: true
+    description: 'Check for empty commit message'
+    
+  TrailingPeriod:
+    enabled: true
+    description: 'Check subject line does not end with period'
+    
+  TextWidth:
+    enabled: true
+    max_subject_width: 60
+    max_body_width: 72
+    description: 'Check commit message line length'
+
+# Hooks that run after commits
+PostCommit:
+  ALL:
+    enabled: false
+
+# Hooks that run after checkouts
+PostCheckout:
+  ALL:
+    enabled: false

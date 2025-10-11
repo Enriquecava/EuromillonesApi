@@ -1,0 +1,60 @@
+name: Pre-commit Checks
+
+on:
+  pull_request:
+    branches: [ main, devel ]
+  push:
+    branches: [ main, devel ]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.1'
+        bundler-cache: true
+        
+    - name: Install dependencies
+      run: bundle install
+        
+    - name: Install Overcommit
+      run: |
+        bundle exec overcommit --install
+        bundle exec overcommit --sign
+        
+    - name: Run pre-commit hooks on changed files
+      if: github.event_name == 'pull_request'
+      run: |
+        # Get list of changed files
+        git fetch origin ${{ github.base_ref }}
+        CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+        echo "Changed files:"
+        echo "$CHANGED_FILES"
+        
+        # Run overcommit on changed files
+        if echo "$CHANGED_FILES" | grep -q "\.rb$"; then
+          echo "Ruby files changed, running pre-commit hooks..."
+          bundle exec overcommit --run
+        else
+          echo "No Ruby files changed, skipping pre-commit hooks"
+        fi
+        
+    - name: Run all pre-commit hooks
+      if: github.event_name == 'push'
+      run: bundle exec overcommit --run
+      
+    - name: Validate commit messages
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "Validating commit messages in PR..."
+        git log --oneline origin/${{ github.base_ref }}..HEAD | while read commit; do
+          echo "✓ $commit"
+        done

@@ -18,6 +18,10 @@ gem "bcrypt", "~> 3.1"
 # Swagger/OpenAPI documentation
 gem "rack-cors"
 
+group :development do
+  gem "overcommit", "~> 0.60"
+end
+
 group :test do
   gem "rspec", "~> 3.12"
   gem "rack-test", "~> 2.1"

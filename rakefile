@@ -1,0 +1,152 @@
+# frozen_string_literal: true
+
+require 'rspec/core/rake_task'
+
+# Default task
+task default: [:test]
+
+# Test tasks
+desc "Run all tests"
+task test: [:spec]
+
+desc "Run RSpec tests"
+RSpec::Core::RakeTask.new(:spec) do |t|
+  t.rspec_opts = '--format progress --color'
+end
+
+desc "Run RSpec tests with documentation format"
+RSpec::Core::RakeTask.new(:spec_doc) do |t|
+  t.rspec_opts = '--format documentation --color'
+end
+
+desc "Run tests for changed files only"
+task :test_changed do
+  changed_files = `git diff --cached --name-only --diff-filter=ACM`.split("\n")
+  spec_files = changed_files.select { |f| f.start_with?('spec/') && f.end_with?('_spec.rb') }
+
+  if spec_files.any?
+    puts "Running tests for changed spec files: #{spec_files.join(', ')}"
+    system("bundle exec rspec #{spec_files.join(' ')} --format progress")
+  else
+    # If no spec files changed, check if source files changed
+    source_files = changed_files.select { |f| f.end_with?('.rb') && !f.start_with?('spec/') }
+    if source_files.any?
+      puts "Source files changed: #{source_files.join(', ')}"
+      puts "Running full test suite..."
+      system("bundle exec rspec --format progress")
+    else
+      puts "No Ruby files changed, skipping tests."
+    end
+  end
+end
+
+desc "Run tests with coverage"
+task :test_coverage do
+  ENV['COVERAGE'] = 'true'
+  Rake::Task[:spec].invoke
+end
+
+desc "Install git hooks with Overcommit"
+task :install_hooks do
+  puts "Installing Overcommit hooks..."
+  system("bundle exec overcommit --install")
+  puts "Signing Overcommit configuration..."
+  system("bundle exec overcommit --sign")
+  puts "✅ Git hooks installed successfully!"
+  puts ""
+  puts "🔧 Available commands:"
+  puts "  rake test          - Run all tests"
+  puts "  rake test_changed  - Run tests for changed files only"
+  puts "  rake install_hooks - Reinstall git hooks"
+  puts ""
+  puts "📝 To bypass hooks temporarily:"
+  puts "  git commit --no-verify -m 'message'"
+end
+
+desc "Uninstall git hooks"
+task :uninstall_hooks do
+  puts "Uninstalling Overcommit hooks..."
+  system("bundle exec overcommit --uninstall")
+  puts "✅ Git hooks uninstalled!"
+end
+
+desc "List configured git hooks"
+task :list_hooks do
+  puts "📋 Configured git hooks:"
+  system("bundle exec overcommit --list-hooks")
+end
+
+desc "Check hook signatures"
+task :check_hooks do
+  puts "🔍 Checking hook signatures..."
+  system("bundle exec overcommit --sign")
+end
+
+# Development helpers
+namespace :dev do
+  desc "Setup development environment"
+  task :setup do
+    puts "🚀 Setting up development environment..."
+
+    puts "📦 Installing dependencies..."
+    system("bundle install")
+
+    puts "🔧 Installing git hooks..."
+    Rake::Task[:install_hooks].invoke
+
+    puts "✅ Development environment ready!"
+    puts ""
+    puts "💡 Next steps:"
+    puts "  1. Configure your database in .env"
+    puts "  2. Run 'rake test' to verify everything works"
+    puts "  3. Start coding! Git hooks will run tests automatically"
+  end
+
+  desc "Clean development environment"
+  task :clean do
+    puts "🧹 Cleaning development environment..."
+
+    # Remove temporary files
+    system("rm -rf tmp/")
+    system("rm -rf coverage/")
+
+    puts "✅ Development environment cleaned!"
+  end
+end
+
+# CI/CD helpers
+namespace :ci do
+  desc "Run CI test suite"
+  task :test do
+    puts "🔄 Running CI test suite..."
+
+    # Set test environment
+    ENV['RACK_ENV'] = 'test'
+    ENV['APP_ENV'] = 'test'
+
+    # Run tests with JUnit output for CI
+    system("bundle exec rspec --format progress --format RspecJunitFormatter --out tmp/rspec_results.xml")
+  end
+
+  desc "Run security audit"
+  task :security do
+    puts "🔒 Running security audit..."
+    system("gem install bundler-audit") unless system("which bundle-audit > /dev/null 2>&1")
+    system("bundle audit --update")
+  end
+
+  desc "Check Ruby syntax"
+  task :syntax do
+    puts "📝 Checking Ruby syntax..."
+    ruby_files = Dir.glob("**/*.rb").reject { |f| f.start_with?("vendor/") }
+
+    ruby_files.each do |file|
+      unless system("ruby -c #{file} > /dev/null 2>&1")
+        puts "❌ Syntax error in #{file}"
+        exit 1
+      end
+    end
+
+    puts "✅ All Ruby files have valid syntax"
+  end
+end

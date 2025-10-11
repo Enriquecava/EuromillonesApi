@@ -67,6 +67,32 @@ bundle exec rspec spec/requests/results_spec.rb
 
 # Run tests with detailed format
 bundle exec rspec --format documentation
+
+# Run tests for changed files only (optimized)
+rake test_changed
+```
+
+### Pre-commit Hooks
+
+This project uses [Overcommit](https://github.com/sds/overcommit) to run tests automatically before commits:
+
+```bash
+# Install git hooks (one-time setup)
+rake install_hooks
+
+# Or use the development setup task
+rake dev:setup
+```
+
+**What happens on commit:**
+- ✅ RSpec tests run automatically
+- ✅ Ruby syntax validation
+- ✅ Trailing whitespace check
+- ✅ Commit message format validation
+
+**To bypass hooks temporarily (emergencies only):**
+```bash
+git commit --no-verify -m "Emergency fix"
 ```
 
 ### API Documentation
@@ -133,24 +159,44 @@ bundle exec rspec spec/requests/results_spec.rb
 bundle exec rspec --format html --out coverage/index.html
 ```
 
-## 🔄 CI/CD
+## 🔄 CI/CD & Branch Protection
 
-The project includes GitHub Actions for:
+The project includes comprehensive CI/CD with multi-level protection:
 
+### Local Protection (Pre-commit Hooks)
+- **Overcommit gem** runs tests before commits
+- **Syntax validation** for Ruby files
+- **Code quality checks** (whitespace, line endings)
+- **Commit message validation**
+
+### Remote Protection (GitHub Actions)
 - **Automated tests** on every PR
 - **Linting** and syntax validation
 - **Security audit** with bundler-audit
 - **PostgreSQL database setup** for tests
+- **Branch protection validation**
 
-### Workflow
+### Branch Protection Rules
+- **main**: Requires PR + 1 approval + all status checks + code owner review
+- **devel**: Requires PR + all status checks + 1 approval
+- **feature branches**: No restrictions
+
+### Workflows
 
 ```yaml
 # .github/workflows/ci.yml
 - Tests with PostgreSQL
 - Ruby syntax validation
 - Security audit
-- Report generation
+- Branch protection validation
+
+# .github/workflows/pre-commit.yml
+- Pre-commit hooks validation
+- Changed files analysis
+- Commit message validation
 ```
+
+For detailed branch protection setup, see [`BRANCH_PROTECTION_SETUP.md`](BRANCH_PROTECTION_SETUP.md).
 
 ## 🗃️ Database
 
@@ -229,18 +275,74 @@ RATE_LIMIT_WINDOW=60
 
 ## 🤝 Contributing
 
-1. Fork the project
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Development Workflow
+
+1. **Setup development environment:**
+   ```bash
+   git clone https://github.com/your-username/EuromillonesApi.git
+   cd EuromillonesApi
+   bundle install
+   rake dev:setup  # Installs git hooks automatically
+   ```
+
+2. **Create a feature branch:**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+
+3. **Develop with automatic testing:**
+   ```bash
+   # Edit your code
+   # Tests run automatically on commit via pre-commit hooks
+   git add .
+   git commit -m "Add amazing feature"
+   ```
+
+4. **Push and create PR:**
+   ```bash
+   git push origin feature/amazing-feature
+   # Create PR to 'devel' branch (not main directly)
+   ```
+
+5. **Merge flow:**
+   ```
+   feature/branch → devel → main
+   ```
 
 ### Code Standards
 
-- Follow Ruby conventions
-- Add tests for new features
-- Maintain high test coverage
-- Document API changes
+- **Follow Ruby conventions** and style guides
+- **Add tests for new features** - pre-commit hooks enforce this
+- **Maintain high test coverage** - CI checks this automatically
+- **Document API changes** in swagger.yaml
+- **Use descriptive commit messages** - enforced by commit hooks
+- **Keep PRs focused** - one feature per PR
+
+### Pre-commit Hooks
+
+The project automatically runs these checks before each commit:
+- ✅ **RSpec tests** - ensures your changes don't break existing functionality
+- ✅ **Ruby syntax** - catches syntax errors before they reach CI
+- ✅ **Code formatting** - maintains consistent style
+- ✅ **Commit message format** - ensures clear commit history
+
+### Bypassing Hooks (Emergency Only)
+
+```bash
+# Only use in genuine emergencies
+git commit --no-verify -m "Emergency hotfix"
+```
+
+### Available Rake Tasks
+
+```bash
+rake test              # Run all tests
+rake test_changed      # Run tests for changed files only
+rake install_hooks     # Install/reinstall git hooks
+rake dev:setup         # Complete development setup
+rake ci:test           # Run CI test suite locally
+rake ci:security       # Run security audit
+```
 
 ## 📝 License
 
