@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 RSpec.describe 'GET /results/:date' do
-  let(:previous_wednesday) { (Date.today - ((2 - Date.today.wday) % 7)).strftime("%Y-%m-%d") }
+  let(:previous_wednesday) { (Date.today - ((Date.today.wday - 3) % 7)).strftime("%Y-%m-%d") }
   let(:future_date) { (Date.today + 3).strftime("%Y-%m-%d") }
 
   context 'when the lottery result exists in the database' do

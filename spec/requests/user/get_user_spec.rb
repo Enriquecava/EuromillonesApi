@@ -74,7 +74,6 @@ RSpec.describe 'GET /user/:email' do
 
   context "when a database error occurs" do
     it "returns 500 and a database error message" do
-      # Make DB.exec_params raise PG::Error
       allow(DB).to receive(:exec_params).and_raise(PG::Error.new("connection lost"))
 
       get "/user/test@example.com"
