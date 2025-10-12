@@ -33,12 +33,16 @@ jobs:
         ruby-version: '3.1'
         bundler-cache: true
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -yqq install libpq-dev
+
     - name: Set up test database
       env:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/euromillones_test
         PGPASSWORD: postgres
       run: |
-        sudo apt-get -yqq install libpq-dev
         createdb -h localhost -U postgres euromillones_test || true
         psql -h localhost -U postgres -d euromillones_test -c "
           CREATE TABLE IF NOT EXISTS results (
@@ -79,6 +83,11 @@ jobs:
       with:
         ruby-version: '3.1'
         bundler-cache: true
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -yqq install libpq-dev
 
     - name: Install dependencies
       run: bundle install
