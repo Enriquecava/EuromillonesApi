@@ -6,6 +6,14 @@ on:
   push:
     branches: [ main, devel ]
 
+env:
+  PG_HOST: ${{ secrets.PG_HOST }}
+  PG_PORT: ${{ secrets.PG_PORT }}
+  PG_DB: ${{ secrets.PG_DB }}
+  PG_USER: ${{ secrets.PG_USER }}
+  PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+
+
 jobs:
   test:
     runs-on: ubuntu-latest
