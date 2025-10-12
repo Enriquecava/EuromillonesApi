@@ -23,9 +23,9 @@ jobs:
         bundler-cache: true
         
     - name: Install dependencies
-        run: |
-          gem install bundler
-          bundle install
+      run: |
+        gem install bundler
+        bundle install
         
     - name: Install Overcommit
       run: |

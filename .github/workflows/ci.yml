@@ -10,54 +10,21 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
-    services:
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: euromillones_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.4'
 
-
     - name: Install dependencies
-            run: |
-              gem install bundler
-              bundle install
-
-    - name: Set up test database
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/euromillones_test
-        PGPASSWORD: postgres
       run: |
-        createdb -h localhost -U postgres euromillones_test || true
-        psql -h localhost -U postgres -d euromillones_test -c "
-          CREATE TABLE IF NOT EXISTS results (
-            id SERIAL PRIMARY KEY,
-            date DATE NOT NULL UNIQUE,
-            bolas JSONB NOT NULL,
-            stars JSONB NOT NULL,
-            jackpot JSONB NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          );
-        "
+        gem install bundler
+        bundle install
 
     - name: Run RSpec tests
       env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/euromillones_test
         APP_ENV: test
         LOG_LEVEL: error
       run: bundle exec rspec --format progress --format RspecJunitFormatter --out tmp/rspec_results.xml
@@ -78,7 +45,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.2.2'
+        ruby-version: '3.4'
 
     - name: Install system dependencies
       run: |
