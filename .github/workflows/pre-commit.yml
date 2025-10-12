@@ -19,11 +19,13 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.1'
+        ruby-version: '3.4'
         bundler-cache: true
         
     - name: Install dependencies
-      run: bundle install
+        run: |
+          gem install bundler
+          bundle install
         
     - name: Install Overcommit
       run: |

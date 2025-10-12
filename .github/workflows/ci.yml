@@ -25,18 +25,18 @@ jobs:
           - 5432:5432
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.1'
-        bundler-cache: true
+        ruby-version: '3.4'
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get -yqq install libpq-dev
+
+    - name: Install dependencies
+            run: |
+              gem install bundler
+              bundle install
 
     - name: Set up test database
       env:
@@ -54,9 +54,6 @@ jobs:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
         "
-
-    - name: Install dependencies
-      run: bundle install
 
     - name: Run RSpec tests
       env:
@@ -81,8 +78,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.1'
-        bundler-cache: true
+        ruby-version: '3.2.2'
 
     - name: Install system dependencies
       run: |
@@ -90,7 +86,11 @@ jobs:
         sudo apt-get -yqq install libpq-dev
 
     - name: Install dependencies
-      run: bundle install
+      run: |
+        gem install bundler
+        bundle config set --local deployment false
+        bundle config set --local path vendor/bundle
+        bundle install --jobs 4 --retry 3
 
     - name: Check Ruby syntax
       run: |

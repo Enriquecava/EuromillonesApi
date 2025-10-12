@@ -20,21 +20,12 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.1'
-          bundler-cache: true
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get -yqq install libpq-dev
+          ruby-version: '3.4'
 
       - name: Install dependencies
-        run: bundle install
+        run: |
+          gem install bundler
+          bundle install
 
       - name: Install Playwright browsers
         run: npx playwright install
