@@ -74,7 +74,7 @@ rake test_changed
 
 ### Pre-commit Hooks
 
-This project uses [Overcommit](https://github.com/sds/overcommit) to run tests automatically before commits:
+This project uses [Overcommit](https://github.com/sds/overcommit) to run tests automatically before commits and pushes:
 
 ```bash
 # Install git hooks (one-time setup)
@@ -84,16 +84,30 @@ rake install_hooks
 rake dev:setup
 ```
 
-**What happens on commit:**
-- ✅ RSpec tests run automatically
+**What happens on commit (fast feedback):**
+- ✅ Tests for changed files only
 - ✅ Ruby syntax validation
-- ✅ Trailing whitespace check
+- ✅ YAML/JSON syntax validation
+- ✅ Merge conflict detection
 - ✅ Commit message format validation
+
+**What happens on push (quality gate):**
+- ✅ Full RSpec test suite
+- ✅ Complete validation before code reaches remote
+
+**GitHub Actions (CI/CD):**
+- ✅ Runs on PRs targeting `main` or `devel` branches
+- ✅ Runs on pushes to `main` or `devel` branches
+- ✅ Full test suite with PostgreSQL
+- ✅ Security audit and code quality checks
 
 **To bypass hooks temporarily (emergencies only):**
 ```bash
 git commit --no-verify -m "Emergency fix"
+git push --no-verify
 ```
+
+For detailed setup instructions, see [`docs/OVERCOMMIT_SETUP.md`](docs/OVERCOMMIT_SETUP.md).
 
 ### API Documentation
 

@@ -77,3 +77,6 @@ tmp/rspec_results.xml
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Overcommit
+.overcommit-*

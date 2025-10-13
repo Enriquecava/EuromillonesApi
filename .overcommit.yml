@@ -1,0 +1,74 @@
+# Overcommit configuration for EuromillonesApi
+# This file configures git hooks to run automatically on commits and pushes
+
+# Verify signatures to ensure hooks haven't been tampered with
+verify_signatures: true
+
+# Pre-commit hooks - run on every commit
+PreCommit:
+  # Run tests for changed files only (fast feedback)
+  RakeTarget:
+    enabled: true
+    targets:
+      - 'test_changed'
+    description: 'Running tests for changed files'
+
+  # Check Ruby syntax
+  RubySyntax:
+    enabled: true
+    description: 'Checking Ruby syntax'
+
+  # Check for merge conflict markers
+  MergeConflicts:
+    enabled: true
+    description: 'Checking for merge conflicts'
+
+  # Check for trailing whitespace (disabled for existing codebase)
+  TrailingWhitespace:
+    enabled: false
+    description: 'Checking for trailing whitespace'
+
+  # Ensure files end with newline
+  FixedSize:
+    enabled: false
+
+  # Check YAML syntax
+  YamlSyntax:
+    enabled: true
+    description: 'Checking YAML syntax'
+
+  # Check JSON syntax  
+  JsonSyntax:
+    enabled: true
+    description: 'Checking JSON syntax'
+
+# Pre-push hooks - run before pushing to remote
+PrePush:
+  # Run full test suite before pushing
+  RakeTarget:
+    enabled: true
+    targets:
+      - 'test'
+    description: 'Running full test suite before push'
+
+# Post-checkout hooks - run after checking out a branch
+PostCheckout:
+  # Remind to install dependencies if Gemfile changed
+  BundleCheck:
+    enabled: true
+    description: 'Checking if bundle install is needed'
+
+# Commit message hooks
+CommitMsg:
+  # Ensure commit messages are properly formatted
+  TextWidth:
+    enabled: true
+    max_subject_width: 72
+    max_body_width: 80
+    description: 'Checking commit message formatting'
+
+  # Prevent commits to protected branches (if needed)
+  # Uncomment and configure if you want to prevent direct commits to main/devel
+  # CapitalizedSubject:
+  #   enabled: true
+  #   description: 'Ensuring commit subject starts with capital letter'
