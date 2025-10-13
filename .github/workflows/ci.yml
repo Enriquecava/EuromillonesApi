@@ -86,31 +86,6 @@ jobs:
           path: tmp/rspec_results.xml
           retention-days: 7
 
-      - name: Comment PR with test results
-        uses: actions/github-script@v7
-        if: github.event_name == 'pull_request' && always()
-        with:
-          script: |
-            const fs = require('fs');
-            const path = 'tmp/rspec_results.xml';
-            
-            let message = '## 🧪 Test Results\n\n';
-            
-            if (fs.existsSync(path)) {
-              message += '✅ Tests completed successfully!\n';
-              message += '📊 Detailed results are available in the test artifacts.';
-            } else {
-              message += '❌ Tests failed or results file not found.\n';
-              message += '🔍 Please check the workflow logs for details.';
-            }
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            });
-
   quality_checks:
     name: Code Quality
     runs-on: ubuntu-latest
