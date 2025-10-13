@@ -103,13 +103,21 @@ jobs:
       - name: Check for merge conflicts
         run: |
           echo "🔍 Checking for merge conflict markers..."
-          CONFLICT_MARKERS=$(grep -r "<<<<<<< HEAD" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=.git . || true)
-          CONFLICT_SEPARATORS=$(grep -r "=======" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=.git . | grep -v ".github/workflows/ci.yml" || true)
           
-          if [ -n "$CONFLICT_MARKERS" ] || [ -n "$CONFLICT_SEPARATORS" ]; then
-            echo "❌ Merge conflict markers found!"
-            [ -n "$CONFLICT_MARKERS" ] && echo "$CONFLICT_MARKERS"
-            [ -n "$CONFLICT_SEPARATORS" ] && echo "$CONFLICT_SEPARATORS"
+          # Create temporary patterns to avoid self-detection
+          HEAD_PATTERN="<<<<<<<[[:space:]]HEAD"
+          SEP_PATTERN="======="
+          END_PATTERN=">>>>>>>"
+          
+          # Check for conflict markers, excluding this workflow file
+          CONFLICTS=$(find . -name "*.rb" -o -name "*.yml" -o -name "*.yaml" -o -name "*.json" | \
+                     grep -v vendor/ | grep -v node_modules/ | grep -v ".git/" | \
+                     xargs grep -l "$HEAD_PATTERN\|$SEP_PATTERN\|$END_PATTERN" 2>/dev/null | \
+                     grep -v ".github/workflows/ci.yml" || true)
+          
+          if [ -n "$CONFLICTS" ]; then
+            echo "❌ Merge conflict markers found in:"
+            echo "$CONFLICTS"
             exit 1
           else
             echo "✅ No merge conflict markers found"
