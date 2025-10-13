@@ -104,10 +104,11 @@ module Validators
   end
 
   def self.valid_euromillones_draw_day?(date_str)
-    return false if date_str.nil? || date_str.strip.empty?
-    
+    puts("Validating draw day for date: #{date_str}")
+    return false if date_str.nil? || date_str.strip.empty? 
     begin
       date = Date.strptime(date_str, "%Y-%m-%d")
+      puts("Parsed date: #{date}, wday: #{date.wday}")
       draw_days = [2, 5]
       draw_days.include?(date.wday)
     rescue ArgumentError

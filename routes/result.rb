@@ -19,7 +19,6 @@ get "/results/:date" do
   
   sanitized_params = ValidationMiddleware.sanitize_url_params(params)
   date_str = sanitized_params["date"]&.strip
-
   unless Validators.valid_date_format?(date_str)
     AppLogger.log_validation_error("date", sanitized_params["date"], "Invalid date format (use YYYY-MM-DD)")
     status 400
@@ -45,7 +44,6 @@ get "/results/:date" do
     status 400
     return { error: "Date cannot be in the future" }.to_json
   end
-
   unless Validators.valid_euromillones_draw_day?(date_str)
     day_name = date.strftime("%A")
     AppLogger.log_validation_error("date", date_str, "#{day_name} is not a Euromillones draw day")

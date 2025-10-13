@@ -6,7 +6,6 @@ require_relative "lib/validators"
 require_relative "lib/app_logger"
 require_relative "lib/auth_middleware"
 
-# Configure CORS for Swagger UI
 configure do
   enable :cross_origin
   AppLogger.info("Euromillones API starting up", "STARTUP")
@@ -18,13 +17,11 @@ before do
   response.headers['Access-Control-Allow-Origin'] = '*'
   response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
   response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-  
-  # Log all requests (except OPTIONS)
+
   unless request.request_method == 'OPTIONS'
     @request_start_time = Time.now
     AppLogger.debug("Request started: #{request.request_method} #{request.path_info}", "HTTP")
-    
-    # Apply authentication to API routes (not to docs, swagger, etc.)
+
     if request.path_info.match?(/^\/(user|combinations|results)/)
       auth_info = AuthMiddleware.authenticate_request(request)
       
@@ -33,8 +30,7 @@ before do
         AppLogger.warn("Unauthorized access attempt to: #{request.path_info}", "AUTH")
         halt 401, { error: "Authentication required. Use Basic Auth with nickname:password" }.to_json
       end
-      
-      # Establecer contexto de autenticación para RLS
+
       DatabaseConnection.set_user_context(DB, auth_info)
       @current_auth_user = auth_info
       AppLogger.info("Authenticated user #{auth_info[:nickname]} accessing #{request.path_info}", "AUTH")
@@ -56,13 +52,11 @@ options "*" do
   200
 end
 
-# Load separate routes
 require_relative "routes/system"
 require_relative "routes/users"
-require_relative "routes/euromillones"
+require_relative "routes/result"
 require_relative "routes/combinations"
 
-# Routes for Swagger UI
 get "/swagger.yaml" do
   content_type "application/x-yaml"
   File.read("swagger.yaml")
