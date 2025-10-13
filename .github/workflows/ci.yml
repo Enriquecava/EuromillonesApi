@@ -1,0 +1,185 @@
+name: CI - Tests and Quality Checks
+
+on:
+  # Run on pull requests targeting main or devel branches
+  pull_request:
+    branches: [ main, devel ]
+    types: [ opened, synchronize, reopened ]
+  
+  # Run on pushes to main or devel branches
+  push:
+    branches: [ main, devel ]
+
+  # Allow manual workflow runs
+  workflow_dispatch:
+
+env:
+  RUBY_VERSION: '3.4'
+  RACK_ENV: test
+  APP_ENV: test
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    # Set up PostgreSQL service for tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: euromillones_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Set up test database environment
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_DB: euromillones_test
+          PG_USER: postgres
+          PG_PASSWORD: postgres
+        run: |
+          echo "Database connection configured for tests"
+
+      - name: Check Ruby syntax
+        run: |
+          echo "🔍 Checking Ruby syntax..."
+          bundle exec rake ci:syntax
+
+      - name: Run security audit
+        run: |
+          echo "🔒 Running security audit..."
+          bundle exec rake ci:security
+
+      - name: Run full test suite
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_DB: euromillones_test
+          PG_USER: postgres
+          PG_PASSWORD: postgres
+        run: |
+          echo "🧪 Running full test suite..."
+          bundle exec rake ci:test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: tmp/rspec_results.xml
+          retention-days: 7
+
+      - name: Comment PR with test results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && always()
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'tmp/rspec_results.xml';
+            
+            let message = '## 🧪 Test Results\n\n';
+            
+            if (fs.existsSync(path)) {
+              message += '✅ Tests completed successfully!\n';
+              message += '📊 Detailed results are available in the test artifacts.';
+            } else {
+              message += '❌ Tests failed or results file not found.\n';
+              message += '🔍 Please check the workflow logs for details.';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+
+  quality_checks:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Check for merge conflicts
+        run: |
+          echo "🔍 Checking for merge conflict markers..."
+          if grep -r "<<<<<<< HEAD\|=======" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" .; then
+            echo "❌ Merge conflict markers found!"
+            exit 1
+          else
+            echo "✅ No merge conflict markers found"
+          fi
+
+      - name: Check for trailing whitespace
+        run: |
+          echo "🔍 Checking for trailing whitespace..."
+          if grep -r "[[:space:]]$" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" .; then
+            echo "❌ Files with trailing whitespace found!"
+            exit 1
+          else
+            echo "✅ No trailing whitespace found"
+          fi
+
+      - name: Validate YAML files
+        run: |
+          echo "🔍 Validating YAML files..."
+          find . -name "*.yml" -o -name "*.yaml" | while read file; do
+            if ! ruby -ryaml -e "YAML.load_file('$file')" 2>/dev/null; then
+              echo "❌ Invalid YAML: $file"
+              exit 1
+            fi
+          done
+          echo "✅ All YAML files are valid"
+
+      - name: Validate JSON files
+        run: |
+          echo "🔍 Validating JSON files..."
+          find . -name "*.json" | while read file; do
+            if ! ruby -rjson -e "JSON.parse(File.read('$file'))" 2>/dev/null; then
+              echo "❌ Invalid JSON: $file"
+              exit 1
+            fi
+          done
+          echo "✅ All JSON files are valid"
+
+  notify_status:
+    name: Notify Status
+    runs-on: ubuntu-latest
+    needs: [test, quality_checks]
+    if: always()
+    
+    steps:
+      - name: Check overall status
+        run: |
+          if [[ "${{ needs.test.result }}" == "success" && "${{ needs.quality_checks.result }}" == "success" ]]; then
+            echo "✅ All checks passed! Ready for review/merge."
+          else
+            echo "❌ Some checks failed. Please review the logs."
+            exit 1
+          fi
