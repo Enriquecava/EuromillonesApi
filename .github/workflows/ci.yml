@@ -128,7 +128,7 @@ jobs:
       - name: Check for merge conflicts
         run: |
           echo "🔍 Checking for merge conflict markers..."
-          if grep -r "<<<<<<< HEAD\|=======" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" .; then
+          if grep -r "<<<<<<< HEAD\|=======" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=.git .; then
             echo "❌ Merge conflict markers found!"
             exit 1
           else
@@ -138,7 +138,7 @@ jobs:
       - name: Check for trailing whitespace
         run: |
           echo "🔍 Checking for trailing whitespace..."
-          if grep -r "[[:space:]]$" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" .; then
+          if grep -r "[[:space:]]$" --include="*.rb" --include="*.yml" --include="*.yaml" --include="*.json" --exclude-dir=vendor --exclude-dir=node_modules --exclude-dir=.git .; then
             echo "❌ Files with trailing whitespace found!"
             exit 1
           else
@@ -148,7 +148,7 @@ jobs:
       - name: Validate YAML files
         run: |
           echo "🔍 Validating YAML files..."
-          find . -name "*.yml" -o -name "*.yaml" | while read file; do
+          find . -name "*.yml" -o -name "*.yaml" | grep -v vendor/ | grep -v node_modules/ | while read file; do
             if ! ruby -ryaml -e "YAML.load_file('$file')" 2>/dev/null; then
               echo "❌ Invalid YAML: $file"
               exit 1
@@ -159,7 +159,7 @@ jobs:
       - name: Validate JSON files
         run: |
           echo "🔍 Validating JSON files..."
-          find . -name "*.json" | while read file; do
+          find . -name "*.json" | grep -v vendor/ | grep -v node_modules/ | while read file; do
             if ! ruby -rjson -e "JSON.parse(File.read('$file'))" 2>/dev/null; then
               echo "❌ Invalid JSON: $file"
               exit 1
