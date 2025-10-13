@@ -17,6 +17,11 @@ env:
   RUBY_VERSION: '3.4'
   RACK_ENV: test
   APP_ENV: test
+  PG_HOST: ${{ secrets.PG_HOST }}
+  PG_PORT: ${{ secrets.PG_PORT }}
+  PG_DB: ${{ secrets.PG_DB }}
+  PG_USER: ${{ secrets.PG_USER }}
+  PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
 
 jobs:
   test:
@@ -69,12 +74,6 @@ jobs:
           bundle exec rake ci:security
 
       - name: Run full test suite
-        env:
-          PG_HOST: localhost
-          PG_PORT: 5432
-          PG_DB: euromillones_test
-          PG_USER: postgres
-          PG_PASSWORD: postgres
         run: |
           echo "🧪 Running full test suite..."
           bundle exec rake ci:test
