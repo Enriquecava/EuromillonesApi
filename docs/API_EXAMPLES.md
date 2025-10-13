@@ -39,7 +39,7 @@ curl -X GET http://localhost:4567/
 ```json
 {
   "api": "Euromillones Results API",
-  "version": "1.0",
+  "version": "1.2.0",
   "endpoints": { ... },
   "description": "This API allows you to query Euromillones results, manage users and their combinations."
 }

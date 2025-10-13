@@ -1,6 +1,14 @@
 # EuromillonesApi
 
-REST API for querying Euromillones lottery results with authentication and security validation.
+**Version 1.2.0** - REST API for querying Euromillones lottery results with authentication and security validation.
+
+## 🆕 What's New in v1.2.0
+
+- **Enhanced Quality Gates**: Comprehensive pre-commit hooks with Overcommit
+- **Complete Test Suite**: Full RSpec test coverage for all endpoints
+- **CI/CD Pipeline**: GitHub Actions with automated testing and security audits
+- **Branch Protection**: Multi-level protection with automated quality checks
+- **Security Improvements**: Enhanced validation and Row Level Security (RLS)
 
 ## 🚀 Features
 

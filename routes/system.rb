@@ -29,7 +29,7 @@ get "/" do
   AppLogger.debug("API info endpoint accessed", "SYSTEM")
   {
     api: "Euromillones Results API",
-    version: "1.0",
+    version: "1.2.0",
     endpoints: {
       get_result: "/results/:date  (YYYY-MM-DD)",
       add_user: "/user  (POST JSON)",
